@@ -1,0 +1,23 @@
+# Entorno virtual
+.venv/
+venv/
+env/
+ENV/
+
+# Archivos de entorno y configuraciones secretas
+.env
+config.json
+
+# Base de datos local (nunca subir a producción para no sobreescribir ni exponer datos)
+*.db
+*.sqlite3
+rivalsconnect.db
+
+# Logs
+logs/
+*.log
+
+# Caches de Python
+__pycache__/
+*.py[cod]
+*$py.class
