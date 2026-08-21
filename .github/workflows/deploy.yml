@@ -1,0 +1,17 @@
+name: Deploy to Debian Server
+on:
+  push:
+    branches:
+      - main # Se ejecuta cuando subes código a la rama main
+jobs:
+  deploy:
+    runs-on: self-hosted # Usa el runner configurado en tu Debian
+    
+    steps:
+    - name: Descargar cambios y reiniciar el bot
+      run: |
+        cd ~/Github/RivalsConnect
+        git pull origin main
+        source venv/bin/activate
+        pip install -r requirements.txt
+        pm2 restart rivalsconnect
