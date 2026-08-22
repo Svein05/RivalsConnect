@@ -206,5 +206,17 @@ class Settings(commands.Cog):
             
         await interaction.followup.send("✅ Canales configurados con éxito. Los paneles se actualizarán automáticamente.")
 
+    @app_commands.command(name="language", description="Cambia el idioma del bot para ti / Change the bot's language for you.")
+    @app_commands.choices(idioma=[
+        app_commands.Choice(name="🇪🇸 Español", value="es"),
+        app_commands.Choice(name="🇺🇸 English", value="en")
+    ])
+    async def language_command(self, interaction: discord.Interaction, idioma: app_commands.Choice[str]):
+        await db.set_user_language(interaction.user.id, idioma.value)
+        if idioma.value == "es":
+            await interaction.response.send_message(f"✅ Idioma actualizado a **Español**.", ephemeral=True)
+        else:
+            await interaction.response.send_message(f"✅ Language updated to **English**.", ephemeral=True)
+
 async def setup(bot):
     await bot.add_cog(Settings(bot))

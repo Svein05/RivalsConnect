@@ -14,8 +14,16 @@ async def init_db():
                 is_playing BOOLEAN DEFAULT 0,
                 match_context TEXT,
                 elo_score INTEGER DEFAULT 0,
-                in_game_uid TEXT
+                in_game_uid TEXT,
+                language TEXT DEFAULT 'es'
             )
+        ''')
+        
+        # Migración automática si la columna no existe
+        try:
+            await db.execute("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'es'")
+        except:
+            pass
         ''')
         
         await db.execute('''
@@ -181,3 +189,15 @@ async def get_top_characters(discord_id: int, limit: int = 3):
             LIMIT ?
         ''', (discord_id, limit)) as cursor:
             return await cursor.fetchall()
+
+async def get_user_language(discord_id: int) -> str:
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT language FROM users WHERE discord_id = ?', (discord_id,)) as cursor:
+            row = await cursor.fetchone()
+            return row[0] if row and row[0] else 'es'
+
+async def set_user_language(discord_id: int, language: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE users SET language = ? WHERE discord_id = ?', (language, discord_id))
+        await db.commit()
+
