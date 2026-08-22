@@ -79,5 +79,7 @@
   "cmd_configprofile": "Administra los Lords y Champions de tu perfil.",
   "cmd_language": "Cambia el idioma en el que el bot te habla.",
   "cmd_profile": "Mira las estadísticas, victorias y Lords de un jugador.",
-  "cmd_leaderboard": "Muestra el top de jugadores del servidor."
+  "cmd_leaderboard": "Muestra el top de jugadores del servidor.",
+  "help_categories_title": "» Categorías",
+  "help_categories_value": "`\n⚙️ Configuración      📊 Estadísticas\n`"
 }
