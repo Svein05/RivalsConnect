@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from src.database import db
+from src.utils.i18n import t
 
 class RoleSelect(discord.ui.Select):
     def __init__(self, placeholder, options):
@@ -37,7 +38,7 @@ class LordsEditView(discord.ui.View):
             "Deadpool", "Devil Dinosaur", "Doctor Strange", "Elsa Bloodstone", 
             "Emma Frost", "Gambit", "Groot", "Hawkeye", "Hela", "Hulk", "Human Torch"
         ]
-        self.select_1 = RoleSelect("2️⃣ Personajes (A - H)", make_options(list_1))
+        self.select_1 = RoleSelect(t("group_1", self.lang), make_options(list_1))
         self.add_item(self.select_1)
         
         list_2 = [
@@ -46,7 +47,7 @@ class LordsEditView(discord.ui.View):
             "Mister Fantastic", "Moon Knight", "Namor", "Peni Parker", 
             "Phoenix", "Psylocke", "Punisher"
         ]
-        self.select_2 = RoleSelect("3️⃣ Personajes (I - P)", make_options(list_2))
+        self.select_2 = RoleSelect(t("group_2", self.lang), make_options(list_2))
         self.add_item(self.select_2)
         
         list_3 = [
@@ -54,8 +55,10 @@ class LordsEditView(discord.ui.View):
             "Squirrel Girl", "Star-Lord", "Storm", "The Hood", "The Thing", 
             "Thor", "Ultron", "Venom", "White Fox", "Winter Soldier", "Wolverine"
         ]
-        self.select_3 = RoleSelect("4️⃣ Personajes (R - Z)", make_options(list_3))
+        self.select_3 = RoleSelect(t("group_3", self.lang), make_options(list_3))
         self.add_item(self.select_3)
+        self.save_button.label = t("btn_save", self.lang)
+
 
     @discord.ui.button(label="💾 Guardar Cambios", style=discord.ButtonStyle.green, row=4)
     async def save_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -73,27 +76,31 @@ class LordsEditView(discord.ui.View):
             await db.update_user_lords(self.discord_id, heroes, self.title_type)
             
             # Recreate main menu view
-            view = SettingsMenu(self.discord_id)
+            view = SettingsMenu(self.discord_id, self.lang)
             lords, champions = await view.get_user_data()
-            lords_text = ", ".join(lords) if lords else "Ninguno"
-            champions_text = ", ".join(champions) if champions else "Ninguno"
+            lords_text = ", ".join(lords) if lords else t("none", lang)
+            champions_text = ", ".join(champions) if champions else t("none", lang)
             
             embed = discord.Embed(
-                title="⚙️ Configuración de Perfil",
-                description="Aquí puedes administrar los títulos (Lords y Champions) que se muestran en tu perfil de RivalsConnect.\n\nRecuerda que **Lord** y **Champion** son mutuamente excluyentes (un personaje no puede tener ambos títulos a la vez).",
+                title=t("settings_title", self.lang),
+                description=t("settings_desc", self.lang),
                 color=discord.Color.blue()
             )
-            embed.add_field(name="👑 Tus Lords Actuales", value=lords_text, inline=False)
-            embed.add_field(name="🌟 Tus Champions Actuales", value=champions_text, inline=False)
+            embed.add_field(name=t("settings_lords_current", lang), value=lords_text, inline=False)
+            embed.add_field(name=t("settings_champs_current", lang), value=champions_text, inline=False)
             
-            await interaction.response.edit_message(content=f"✅ Tus {self.title_type}s han sido guardados correctamente.", embed=embed, view=view)
+            await interaction.response.edit_message(content=t("save_success", self.lang, title_type=self.title_type), embed=embed, view=view)
         except Exception as e:
-            await interaction.response.send_message("❌ Hubo un error al guardar.", ephemeral=True)
+            await interaction.response.send_message(t("save_error", self.lang), ephemeral=True)
 
 class SettingsMenu(discord.ui.View):
-    def __init__(self, discord_id):
+    def __init__(self, discord_id, lang="es"):
         super().__init__(timeout=300)
         self.discord_id = discord_id
+        self.lang = lang
+        self.edit_lords.label = t("btn_edit_lords", self.lang)
+        self.edit_champions.label = t("btn_edit_champs", self.lang)
+
 
     async def get_user_data(self):
         lords = []
@@ -112,14 +119,14 @@ class SettingsMenu(discord.ui.View):
     @discord.ui.button(label="👑 Editar Lords", style=discord.ButtonStyle.primary)
     async def edit_lords(self, interaction: discord.Interaction, button: discord.ui.Button):
         lords, champions = await self.get_user_data()
-        view = LordsEditView(self.discord_id, "Lord", lords, champions)
-        await interaction.response.edit_message(content="**👑 Editando tus Lords**\nSelecciona tus personajes de los menús (tus Champions actuales han sido ocultados para evitar conflictos).", embed=None, view=view)
+        view = LordsEditView(self.discord_id, "Lord", lords, champions, self.lang)
+        await interaction.response.edit_message(content=t("editing_lords", self.lang), embed=None, view=view)
 
     @discord.ui.button(label="🌟 Editar Champions", style=discord.ButtonStyle.primary)
     async def edit_champions(self, interaction: discord.Interaction, button: discord.ui.Button):
         lords, champions = await self.get_user_data()
-        view = LordsEditView(self.discord_id, "Champion", champions, lords)
-        await interaction.response.edit_message(content="**🌟 Editando tus Champions**\nSelecciona tus personajes de los menús (tus Lords actuales han sido ocultados para evitar conflictos).", embed=None, view=view)
+        view = LordsEditView(self.discord_id, "Champion", champions, lords, self.lang)
+        await interaction.response.edit_message(content=t("editing_champs", self.lang), embed=None, view=view)
 
 class Settings(commands.Cog):
     def __init__(self, bot):
@@ -127,6 +134,7 @@ class Settings(commands.Cog):
 
     @app_commands.command(name="configprofile", description="Configura los títulos (Lords/Champions) y opciones de tu perfil.")
     async def configprofile_command(self, interaction: discord.Interaction):
+        lang = await db.get_user_language(interaction.user.id)
         discord_id = interaction.user.id
         
         lords = []
@@ -142,18 +150,18 @@ class Settings(commands.Cog):
             pass
             
         embed = discord.Embed(
-            title="⚙️ Configuración de Perfil", 
-            description="Aquí puedes administrar los títulos (Lords y Champions) que se muestran en tu perfil de RivalsConnect.\n\nRecuerda que **Lord** y **Champion** son mutuamente excluyentes (un personaje no puede tener ambos títulos a la vez).",
+            title=t("settings_title", lang),
+            description=t("settings_desc", lang),
             color=discord.Color.blue()
         )
         
-        lords_text = ", ".join(lords) if lords else "Ninguno"
-        champions_text = ", ".join(champions) if champions else "Ninguno"
+        lords_text = ", ".join(lords) if lords else t("none", lang)
+        champions_text = ", ".join(champions) if champions else t("none", lang)
         
-        embed.add_field(name="👑 Tus Lords Actuales", value=lords_text, inline=False)
-        embed.add_field(name="🌟 Tus Champions Actuales", value=champions_text, inline=False)
+        embed.add_field(name=t("settings_lords_current", lang), value=lords_text, inline=False)
+        embed.add_field(name=t("settings_champs_current", lang), value=champions_text, inline=False)
         
-        view = SettingsMenu(discord_id)
+        view = SettingsMenu(discord_id, lang)
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     @app_commands.command(name="setup_servidor", description="Configura los 3 canales de RivalsConnect.")

@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from src.database import db
+from src.utils.i18n import t
 import logging
 
 logger = logging.getLogger("profile_cog")
@@ -72,7 +73,7 @@ class Profile(commands.Cog):
                     lords_text.append(f"{emoji}")
                     
                 formatted_lords = " ".join(lords_text)
-                embed.add_field(name="Títulos de Personajes", value=formatted_lords, inline=False)
+                embed.add_field(name=t("profile_titles_section", lang), value=formatted_lords, inline=False)
             
             # Crear diccionario falso para que get_hero_emoji procese los Lords correctamente
             fake_lords_dict = {}
@@ -86,7 +87,7 @@ class Profile(commands.Cog):
                 for char_name, total_games, wins in top_chars:
                     emoji = get_hero_emoji(char_name, str(target.id), fake_lords_dict, True)
                     winrate = int((wins / total_games) * 100) if total_games > 0 else 0
-                    top_text.append(f"{emoji} **{char_name}** | {winrate}% WR ({total_games} Partidas)")
+                    top_text.append(t("profile_top_format", lang, emoji=emoji, char=char_name, wr=winrate, games=total_games))
                 
                 embed.add_field(name="Top Personajes", value="\n".join(top_text), inline=False)
                 
@@ -119,14 +120,14 @@ class Profile(commands.Cog):
                     
                 embed.add_field(name="Historial Reciente (Últimas 5)", value="\n".join(history_text), inline=False)
             else:
-                embed.add_field(name="Historial Reciente", value="*No hay partidas jugadas recientemente.*", inline=False)
+                embed.add_field(name=t("profile_recent_title", lang), value=t("profile_recent_empty", lang), inline=False)
                 
-            embed.set_footer(text="RivalsConnect Database")
+            embed.set_footer(text=t("profile_footer", lang))
             await interaction.response.send_message(embed=embed)
             
         except Exception as e:
             logger.error(f"Error ejecutando /profile: {e}")
-            await interaction.response.send_message("❌ Ocurrió un error al buscar el perfil. Inténtalo de nuevo más tarde.", ephemeral=True)
+            await interaction.response.send_message(t("profile_error", lang), ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Profile(bot))

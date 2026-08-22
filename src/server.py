@@ -186,8 +186,11 @@ async def handle_overwolf_events(request):
                 # Obtener diccionario de Lords global
                 lords_dict = await db.get_all_lords_by_uid()
                 
+                # Obtener idioma del usuario
+                lang = await db.get_user_language(discord_id)
+                
                 # Crear embed estructurado
-                embed = create_embed_from_data(data, discord_name, discord_avatar, elo_change, lords_dict)
+                embed = create_embed_from_data(data, discord_name, discord_avatar, elo_change, lords_dict, lang)
                 
                 if embed:
                     user_key = f"user_{discord_id}"

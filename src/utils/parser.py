@@ -1,6 +1,7 @@
 import discord
 import logging
 from src.utils.heroes import get_hero_data
+from src.utils.i18n import t
 
 logger = logging.getLogger("overwolf_parser")
 
@@ -177,40 +178,40 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
             if objective:
                 obj_mode = objective.get("game_mode", "")
                 team_role = objective.get("team", "")
-                role_es = "🛡️ Defendiendo" if team_role == "Defense" else "⚔️ Atacando" if team_role == "Attacker" else team_role
+                role_es = t("defending", lang) if team_role == "Defense" else t("attacking", lang) if team_role == "Attacker" else team_role
                 
                 if obj_mode == "Domination":
                     left = int(objective.get("left_capture", 0))
                     right = int(objective.get("right_capture", 0))
-                    obj_text_ally = f"🔵 Captura: **{left}%**"
-                    obj_text_enemy = f"🔴 Captura: **{right}%**"
+                    obj_text_ally = t("capture_ally", lang, percent=left)
+                    obj_text_enemy = t("capture_enemy", lang, percent=right)
                 elif obj_mode == "Convoy":
                     chk = int(objective.get("checkpoint", 0))
                     progress_bar = ("🟩" * chk) + ("⬛" * max(0, 3 - chk))
-                    obj_footer = f"🎯 Escolta: {progress_bar} (Avance: {chk}) | {role_es}"
+                    obj_footer = t("escort", lang, bar=progress_bar, chk=chk, role=role_es)
                 elif obj_mode == "Convergence":
                     chk = int(objective.get("checkpoint", 0))
-                    obj_footer = f"🎯 Convergencia | Avance: **{chk}** | {role_es}"
+                    obj_footer = t("convergence", lang, chk=chk, role=role_es)
                     
-            aliados_text = "\n".join(col_aliados) if col_aliados else "Buscando..."
+            aliados_text = "\n".join(col_aliados) if col_aliados else t("searching", lang)
             if obj_text_ally:
                 aliados_text += f"\n\n{obj_text_ally}"
                 
-            enemigos_text = "\n".join(col_enemigos) if col_enemigos else "Buscando..."
+            enemigos_text = "\n".join(col_enemigos) if col_enemigos else t("searching", lang)
             if obj_text_enemy:
                 enemigos_text += f"\n\n{obj_text_enemy}"
                 
             # Añadir las 3 columnas
             if col_aliados:
-                embed.add_field(name="Equipo Aliado", value=aliados_text, inline=True)
+                embed.add_field(name=t("ally_team", lang), value=aliados_text, inline=True)
                 
                 # Formatear el score calculando los espacios matemáticamente para centrar la barra en texto plano
                 score_block = "\n".join(col_score)
-                embed.add_field(name="K / D / A", value=score_block, inline=True)
+                embed.add_field(name=t("kda", lang), value=score_block, inline=True)
                 
-                embed.add_field(name="Equipo Enemigo", value=enemigos_text, inline=True)
+                embed.add_field(name=t("enemy_team", lang), value=enemigos_text, inline=True)
             else:
-                embed.add_field(name="Error", value="No hay datos de jugadores.", inline=False)
+                embed.add_field(name=t("error", lang), value=t("no_player_data", lang), inline=False)
                 
             if obj_footer:
                 embed.add_field(name="\u200b", value=obj_footer, inline=False)
@@ -218,7 +219,7 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
             # Personajes Baneados (si los hay)
             bans = payload.get("bans")
             if bans and bans != "Ninguno" and bans != "[]":
-                embed.add_field(name="🚫 Baneos", value=f"*{bans}*", inline=False)
+                embed.add_field(name=t("bans", lang), value=f"*{bans}*", inline=False)
                 
             # Formatear estadísticas del jugador
             stats = payload.get("stats", {})
@@ -231,20 +232,20 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 # Solo mostrar estadísticas si al menos una es mayor a 0
                 if damage > 0 or heal > 0 or block > 0:
                     stat_items = [
-                        (damage, f"⚔️ Daño: **{damage:,}**"),
-                        (heal, f"💚 Curación: **{heal:,}**"),
-                        (block, f"🛡️ Bloqueo: **{block:,}**")
+                        (damage, t("stat_dmg", lang, val=f"{damage:,}")),
+                        (heal, t("stat_heal", lang, val=f"{heal:,}")),
+                        (block, t("stat_block", lang, val=f"{block:,}"))
                     ]
                     # Ordenar de mayor a menor valor
                     stat_items.sort(key=lambda x: x[0], reverse=True)
                     
                     # Unir y agregar precisión al final
                     stats_str = " | ".join(item[1] for item in stat_items)
-                    stats_str += f" | 🎯 Prec: **{accuracy}%**"
+                    stats_str += f" | {t('stat_acc', lang, val=accuracy)}"
                     
-                    embed.add_field(name="Tus Estadísticas Adicionales", value=stats_str, inline=False)
+                    embed.add_field(name=t("stats_title", lang), value=stats_str, inline=False)
                 
-            embed.set_footer(text="RivalsConnect | Datos Oficiales")
+            embed.set_footer(text=t("footer_official", lang))
             return embed
             
         return None
