@@ -19,13 +19,13 @@ def get_hero_emoji(character_name, uid, lords_dict, is_ally=True):
     short_name = hero_data["short_code"]
     
     if title == "Animated Lord" or title == "Champion":
-        t = "lordani"
+        title_suffix = "lordani"
     elif title == "Lord":
-        t = "lord"
+        title_suffix = "lord"
     else:
-        t = "basic"
+        title_suffix = "basic"
         
-    emoji_name = f"{short_name}_{t}"
+    emoji_name = f"{short_name}_{title_suffix}"
     
     if emoji_name in APP_EMOJIS:
         return APP_EMOJIS[emoji_name]

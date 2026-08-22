@@ -61,11 +61,11 @@ class Profile(commands.Cog):
                     short_name = get_hero_data(char)["short_code"]
                     
                     if title == "Animated Lord" or title == "Champion":
-                        t = "lordani"
+                        title_suffix = "lordani"
                     else:
-                        t = "lord"
+                        title_suffix = "lord"
                         
-                    emoji_name = f"{short_name}_{t}"
+                    emoji_name = f"{short_name}_{title_suffix}"
                     if emoji_name in APP_EMOJIS:
                         emoji = APP_EMOJIS[emoji_name]
                     else:
