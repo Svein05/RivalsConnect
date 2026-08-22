@@ -95,7 +95,7 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
             if ally_bans: ban_text += f"**{t('ally_team', lang)}:** " + ", ".join(ally_bans) + "\n"
             if enemy_bans: ban_text += f"**{t('enemy_team', lang)}:** " + ", ".join(enemy_bans)
 
-        if event_name == "match_start":
+        if event_name in ["match_start", "match_update_lobby"]:
             embed = discord.Embed(
                 title=f"{modo_display} - {modo} | {mapa}",
                 description="Partida encontrada y cargando...",
@@ -106,7 +106,7 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 embed.set_author(name=f"{discord_name} está en partida", icon_url=discord_avatar)
                 
             if ban_text:
-                embed.add_field(name="🚫 " + t("bans", lang), value=ban_text, inline=False)
+                embed.add_field(name=t("bans", lang), value=ban_text, inline=False)
                 
             return embed
             
@@ -260,9 +260,8 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
             if obj_footer:
                 embed.add_field(name="\u200b", value=obj_footer, inline=False)
             
-            # Personajes Baneados (si los hay)
             if ban_text:
-                embed.add_field(name="🚫 " + t("bans", lang), value=ban_text, inline=False)
+                embed.add_field(name=t("bans", lang), value=ban_text, inline=False)
                 
             # Formatear estadísticas del jugador
             stats = payload.get("stats", {})

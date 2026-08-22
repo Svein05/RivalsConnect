@@ -203,7 +203,7 @@ async def handle_overwolf_events(request):
                         # Nueva partida: Enviamos un mensaje nuevo y lo guardamos
                         msg = await channel.send(embed=embed)
                         active_messages[user_key] = msg
-                    elif event_name in ["match_playing", "match_end"]:
+                    elif event_name in ["match_playing", "match_end", "match_update_lobby"]:
                         # Partida iniciada o terminada: Editamos el mensaje existente
                         msg = active_messages.get(user_key)
                         if msg:

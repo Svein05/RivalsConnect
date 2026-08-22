@@ -97,7 +97,11 @@ async def get_user_by_code(code: str):
 
 async def get_user(discord_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute('SELECT * FROM users WHERE discord_id = ?', (discord_id,)) as cursor:
+        async with db.execute('''
+            SELECT discord_id, discord_name, discord_avatar, link_code, 
+                   is_playing, match_context, elo_score, in_game_uid 
+            FROM users WHERE discord_id = ?
+        ''', (discord_id,)) as cursor:
             return await cursor.fetchone()
 
 async def set_user_code(discord_id: int, discord_name: str, discord_avatar: str, code: str):
