@@ -24,7 +24,6 @@ async def init_db():
             await db.execute("ALTER TABLE users ADD COLUMN language TEXT DEFAULT 'es'")
         except:
             pass
-        ''')
         
         await db.execute('''
             CREATE TABLE IF NOT EXISTS user_lords (
