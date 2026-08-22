@@ -250,7 +250,14 @@ async def get_user_rank(elo: int):
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute('SELECT rank_name, min_elo FROM elo_thresholds WHERE min_elo != 99999 ORDER BY rank_id DESC') as cursor:
             rows = await cursor.fetchall()
+            
+            if not rows:
+                return "Desclasificado"
+                
             for r_name, r_min in rows:
                 if elo >= r_min:
                     return r_name
-    return "Desclasificado"
+                    
+            # Si el ELO es menor que todos los rangos configurados,
+            # lo mantenemos en el rango más bajo configurado en lugar de desclasificarlo.
+            return rows[-1][0]
