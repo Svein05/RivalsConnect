@@ -40,24 +40,28 @@ class HelpDropdown(discord.ui.Select):
             
         embed.set_footer(text="RivalsConnect | Datos Oficiales")
         
-        # Habilitar el botón de Inicio
-        for child in view.children:
-            if isinstance(child, discord.ui.Button) and child.label == t("help_btn_home", self.lang):
-                child.disabled = False
-                break
+        # Reconstruir la vista para mostrar el botón de Inicio y mantener el dropdown
+        view.clear_items()
+        view.add_item(HelpDropdown(self.lang))
+        
+        home_btn = discord.ui.Button(label=t("help_btn_home", self.lang), style=discord.ButtonStyle.secondary, row=1)
+        home_btn.callback = view.home_callback
+        view.add_item(home_btn)
+        
+        close_btn = discord.ui.Button(label=t("help_btn_close", self.lang), style=discord.ButtonStyle.danger, row=1)
+        close_btn.callback = view.close_callback
+        view.add_item(close_btn)
                 
         await interaction.response.edit_message(embed=embed, view=view)
 
 class HelpView(discord.ui.View):
-    def __init__(self, lang="es", home_disabled=True):
+    def __init__(self, lang="es"):
         super().__init__(timeout=300)
         self.lang = lang
         
         self.add_item(HelpDropdown(lang))
         
-        home_btn = discord.ui.Button(label=t("help_btn_home", lang), style=discord.ButtonStyle.secondary, row=1, disabled=home_disabled)
-        home_btn.callback = self.home_callback
-        self.add_item(home_btn)
+        # El botón de inicio NO se añade al principio
         
         close_btn = discord.ui.Button(label=t("help_btn_close", lang), style=discord.ButtonStyle.danger, row=1)
         close_btn.callback = self.close_callback
@@ -66,14 +70,8 @@ class HelpView(discord.ui.View):
     async def home_callback(self, interaction: discord.Interaction):
         embed = build_home_embed(self.lang)
         
-        # Deshabilitar el botón de Inicio nuevamente
-        for child in self.children:
-            if isinstance(child, discord.ui.Button) and child.label == t("help_btn_home", self.lang):
-                child.disabled = True
-                break
-                
-        # Resetear el valor visual del select recreando la vista
-        await interaction.response.edit_message(embed=embed, view=HelpView(self.lang, home_disabled=True))
+        # Resetear la vista para ocultar el botón de Inicio
+        await interaction.response.edit_message(embed=embed, view=HelpView(self.lang))
 
     async def close_callback(self, interaction: discord.Interaction):
         await interaction.message.delete()
@@ -104,7 +102,7 @@ class Help(commands.Cog):
         lang = await db.get_user_language(interaction.user.id)
         
         embed = build_home_embed(lang)
-        view = HelpView(lang, home_disabled=True)
+        view = HelpView(lang)
         
         await interaction.response.send_message(embed=embed, view=view)
 
