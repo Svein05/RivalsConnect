@@ -173,7 +173,7 @@ async def get_top_characters(discord_id: int, limit: int = 3):
         async with db.execute('''
             SELECT character_name, 
                    COUNT(*) as total_games, 
-                   SUM(CASE WHEN outcome = 'Victoria' THEN 1 ELSE 0 END) as wins 
+                   SUM(CASE WHEN LOWER(outcome) LIKE '%victor%' OR LOWER(outcome) LIKE '%win%' THEN 1 ELSE 0 END) as wins 
             FROM matches 
             WHERE discord_id = ? AND character_name IS NOT NULL AND character_name != '???' 
             GROUP BY character_name 

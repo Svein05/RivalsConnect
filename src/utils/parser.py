@@ -1,27 +1,10 @@
 import discord
 import logging
+from src.utils.heroes import get_hero_data
 
 logger = logging.getLogger("overwolf_parser")
 
 APP_EMOJIS = {}
-
-def format_char_name(name):
-    name = name.lower()
-    
-    if name == "hulk":
-        return "bruceb"
-        
-    if name.startswith("the "): 
-        name = name[4:]
-    if "jeff the land shark" in name: 
-        return "jeff"
-        
-    name = name.replace("&", "").replace("-", "")
-    words = name.split()
-    if len(words) == 1: 
-        return words[0]
-    else:
-        return words[0] + words[1][0]
 
 def get_hero_emoji(character_name, uid, lords_dict, is_ally=True):
     """Retorna el emoji correspondiente (de la app o placeholder)"""
@@ -31,7 +14,8 @@ def get_hero_emoji(character_name, uid, lords_dict, is_ally=True):
     char_upper = character_name.upper()
     title = lords_dict.get(uid, {}).get(char_upper)
     
-    short_name = format_char_name(character_name)
+    hero_data = get_hero_data(character_name)
+    short_name = hero_data["short_code"]
     
     if title == "Animated Lord" or title == "Champion":
         t = "lordani"
@@ -111,12 +95,29 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 if discord_avatar:
                     embed.set_author(name=f"{discord_name} - Resumen Final", icon_url=discord_avatar)
 
-            # --- ZOE BOT 3 COLUMNS FORMAT (Aplíca tanto en vivo como al final) ---
+            # --- ZOE BOT 3 COLUMNS FORMAT ---
             aliados_list = []
             enemigos_list = []
             for key, p in roster.items():
                 if p.get("is_teammate"): aliados_list.append(p)
                 else: enemigos_list.append(p)
+                
+            def get_role_priority(role_name):
+                if role_name == "Vanguardia": return 1
+                if role_name == "Duelista": return 2
+                if role_name == "Estratega": return 3
+                return 4
+
+            # Sort by Role then Name
+            aliados_list.sort(key=lambda p: (
+                get_role_priority(get_hero_data(p.get("character_name", ""))["role"]),
+                get_hero_data(p.get("character_name", ""))["display_name"]
+            ))
+            
+            enemigos_list.sort(key=lambda p: (
+                get_role_priority(get_hero_data(p.get("character_name", ""))["role"]),
+                get_hero_data(p.get("character_name", ""))["display_name"]
+            ))
                 
             max_len = max(len(aliados_list), len(enemigos_list))
             while len(aliados_list) < max_len: aliados_list.append(None)
@@ -130,8 +131,8 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 if al:
                     uid = al.get("uid", "")
                     name = al.get("name", "Anónimo").replace("*****", "Anónimo")
-                    hero = al.get("character_name", "???")
-                    emoji = get_hero_emoji(hero, uid, lords_dict, True)
+                    hero = get_hero_data(al.get("character_name", ""))["display_name"]
+                    emoji = get_hero_emoji(al.get("character_name", ""), uid, lords_dict, True)
                     short_name = name[:10] + ".." if len(name) > 12 else name
                     
                     if al.get("is_local"):
@@ -150,8 +151,8 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 if en:
                     uid = en.get("uid", "")
                     name = en.get("name", "Anónimo").replace("*****", "Anónimo")
-                    hero = en.get("character_name", "???")
-                    emoji = get_hero_emoji(hero, uid, lords_dict, False)
+                    hero = get_hero_data(en.get("character_name", ""))["display_name"]
+                    emoji = get_hero_emoji(en.get("character_name", ""), uid, lords_dict, False)
                     short_name = name[:10] + ".." if len(name) > 12 else name
                     
                     # Enemies are never is_local for the viewing user, so no bold
@@ -214,7 +215,7 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
             if bans and bans != "Ninguno" and bans != "[]":
                 embed.add_field(name="🚫 Baneos", value=f"*{bans}*", inline=False)
                 
-            # Formatear estadísticas del jugador en una sola fila compacta (Solo si existen)
+            # Formatear estadísticas del jugador
             stats = payload.get("stats", {})
             if stats:
                 damage = stats.get("damage_dealt", 0)
@@ -224,8 +225,19 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 
                 # Solo mostrar estadísticas si al menos una es mayor a 0
                 if damage > 0 or heal > 0 or block > 0:
-                    stats_str = f"⚔️ Daño: **{damage:,}** | 💚 Curación: **{heal:,}** | 🛡️ Bloqueo: **{block:,}** | 🎯 Prec: **{accuracy}%**"
-                    embed.add_field(name="📊 Tus Estadísticas Adicionales", value=stats_str, inline=False)
+                    stat_items = [
+                        (damage, f"⚔️ Daño: **{damage:,}**"),
+                        (heal, f"💚 Curación: **{heal:,}**"),
+                        (block, f"🛡️ Bloqueo: **{block:,}**")
+                    ]
+                    # Ordenar de mayor a menor valor
+                    stat_items.sort(key=lambda x: x[0], reverse=True)
+                    
+                    # Unir y agregar precisión al final
+                    stats_str = " | ".join(item[1] for item in stat_items)
+                    stats_str += f" | 🎯 Prec: **{accuracy}%**"
+                    
+                    embed.add_field(name="Tus Estadísticas Adicionales", value=stats_str, inline=False)
                 
             embed.set_footer(text="RivalsConnect | Datos Oficiales")
             return embed
