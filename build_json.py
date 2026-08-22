@@ -76,3 +76,29 @@ with open('locales/es.json', 'w', encoding='utf-8') as f:
     json.dump(es, f, indent=2, ensure_ascii=False)
 print('es.json updated')
 
+
+
+es.update({
+    'help_title': 'Menú de Ayuda',
+    'help_desc_main': '¡Hola! Soy RivalsConnect, tu bot oficial para estadísticas de Marvel Rivals en Discord.\\n\\nSelecciona una categoría en el menú desplegable para ver mis comandos.',
+    'help_commands_total': 'Tengo **{num}** comandos disponibles para ti.',
+    'help_links_title': '» Enlaces útiles',
+    'help_links_value': '[Traducción en Crowdin]({crowdin})',
+    'help_cat_config': '⚙️ Configuración',
+    'help_cat_config_desc': 'Personaliza tu perfil y el bot.',
+    'help_cat_stats': '📊 Estadísticas',
+    'help_cat_stats_desc': 'Revisa tu rendimiento y el de otros.',
+    'help_placeholder': 'Selecciona una categoría...',
+    'help_btn_home': '🏠 Inicio',
+    'help_btn_close': '🗑️ Cerrar',
+    'cmd_setup': 'Configura el canal donde el bot enviará el tracker en vivo.',
+    'cmd_configprofile': 'Administra los Lords y Champions de tu perfil.',
+    'cmd_language': 'Cambia el idioma en el que el bot te habla.',
+    'cmd_profile': 'Mira las estadísticas, victorias y Lords de un jugador.',
+    'cmd_leaderboard': 'Muestra el top de jugadores del servidor.'
+})
+
+with open('locales/es.json', 'w', encoding='utf-8') as f:
+    json.dump(es, f, indent=2, ensure_ascii=False)
+print('es.json updated with help')
+
