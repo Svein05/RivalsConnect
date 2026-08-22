@@ -90,7 +90,10 @@ async def handle_overwolf_events(request):
         elif event_name == "status_update":
             status = data.get("status", "Desconectado")
             async with aiosqlite.connect("rivalsconnect.db") as database:
-                await database.execute('UPDATE users SET status = ? WHERE discord_id = ?', (status, discord_id))
+                if status == "Desconectado":
+                    await database.execute('UPDATE users SET status = ?, is_playing = 0 WHERE discord_id = ?', (status, discord_id))
+                else:
+                    await database.execute('UPDATE users SET status = ? WHERE discord_id = ?', (status, discord_id))
                 await database.commit()
                 
             # Actualizar live panel
