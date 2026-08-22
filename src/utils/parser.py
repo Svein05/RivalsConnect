@@ -38,7 +38,7 @@ def get_hero_emoji(character_name, uid, lords_dict, is_ally=True):
         
     return "🔹" if is_ally else "🔸"
 
-def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None, elo_change=0, lords_dict=None):
+def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None, elo_change=0, lords_dict=None, lang="es"):
     """
     Parsea el payload optimizado del cliente de Overwolf y retorna un Embed de Discord.
     """
