@@ -132,9 +132,8 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                     final_color = discord.Color.light_grey()
                     title_prefix = "🛑 Partida Finalizada"
                     
-                elo_text = f" (+{elo_change} ELO)" if elo_change > 0 else (f" ({elo_change} ELO)" if elo_change < 0 else "")
                 embed = discord.Embed(
-                    title=f"{title_prefix}{elo_text} | {modo_display} - {modo} | {mapa}",
+                    title=f"{title_prefix} | {modo_display} - {modo} | {mapa}",
                     color=final_color,
                     timestamp=discord.utils.utcnow()
                 )
@@ -154,16 +153,16 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 if role_name == "Estratega": return 3
                 return 4
 
-            # Sort by Role then Name
-            aliados_list.sort(key=lambda p: (
-                get_role_priority(get_hero_data(p.get("character_name", ""))["role"]),
-                get_hero_data(p.get("character_name", ""))["display_name"]
-            ))
-            
-            enemigos_list.sort(key=lambda p: (
-                get_role_priority(get_hero_data(p.get("character_name", ""))["role"]),
-                get_hero_data(p.get("character_name", ""))["display_name"]
-            ))
+                # Fix sorting by adding Player name as fallback
+            def sort_players(p):
+                char_name = p.get("character_name", "")
+                hdata = get_hero_data(char_name)
+                role_prio = get_role_priority(hdata["role"])
+                disp_name = hdata["display_name"]
+                return (role_prio, disp_name, p.get("name", ""))
+
+            aliados_list.sort(key=sort_players)
+            enemigos_list.sort(key=sort_players)
                 
             max_len = max(len(aliados_list), len(enemigos_list))
             while len(aliados_list) < max_len: aliados_list.append(None)
@@ -189,10 +188,10 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                     k = al.get("kills", 0)
                     d = al.get("deaths", 0)
                     a = al.get("assists", 0)
-                    al_kda = "\u200b" + f"{k}/{d}/{a}".rjust(8, '\u2007')
+                    al_kda = f"{k}/{d}/{a}".rjust(7, ' ')
                 else:
                     col_aliados.append("👤 ABANDONO")
-                    al_kda = "\u200b" + "-/-/-".rjust(8, '\u2007')
+                    al_kda = "-/-/-".rjust(7, ' ')
                     
                 if en:
                     uid = en.get("uid", "")
@@ -207,12 +206,12 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                     k = en.get("kills", 0)
                     d = en.get("deaths", 0)
                     a = en.get("assists", 0)
-                    en_kda = f"{k}/{d}/{a}".ljust(8, '\u2007')
+                    en_kda = f"{k}/{d}/{a}".ljust(7, ' ')
                 else:
                     col_enemigos.append("👤 ABANDONO")
-                    en_kda = "-/-/-".ljust(8, '\u2007')
+                    en_kda = "-/-/-".ljust(7, ' ')
                     
-                col_score.append(f"{al_kda} | {en_kda}")
+                col_score.append(f"` {al_kda} | {en_kda} `")
                 
             # Extraer progreso del objetivo para inyectarlo al final de la partida también
             objective = payload.get("objective")
