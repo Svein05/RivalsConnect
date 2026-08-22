@@ -44,23 +44,16 @@ class Profile(commands.Cog):
             if target.avatar:
                 embed.set_thumbnail(url=target.avatar.url)
                 
-            estado = "🎮 En Partida" if is_playing else "💤 En Lobby / Desconectado"
-            embed.add_field(name="Estado Actual", value=estado, inline=True)
-            embed.add_field(name="Rank / ELO", value=f"⭐ **{elo_score}**", inline=True)
-            
             if in_game_uid:
-                embed.add_field(name="ID de Rivals", value=f"`{in_game_uid}`", inline=True)
+                embed.add_field(name="ID de Rivals", value=f"`{in_game_uid}`", inline=False)
                 
             # Cargar los Lords del usuario
             user_lords = await db.get_user_lords(target.id)
             
+            from src.utils.parser import APP_EMOJIS, format_char_name, get_hero_emoji
+            
             if user_lords:
-                # user_lords es una lista de tuplas: (character_name, title_type)
                 lords_text = []
-                
-                # Importar parser para usar la lógica de emojis global
-                from src.utils.parser import APP_EMOJIS, format_char_name
-                
                 for char, title in user_lords:
                     short_name = format_char_name(char)
                     
@@ -70,28 +63,26 @@ class Profile(commands.Cog):
                         t = "lord"
                         
                     emoji_name = f"{short_name}_{t}"
-                    
                     if emoji_name in APP_EMOJIS:
                         emoji = APP_EMOJIS[emoji_name]
                     else:
-                        # Fallback
-                        if title == "Animated Lord" or title == "Champion":
-                            emoji = "🌟"
-                        else:
-                            emoji = "👑"
+                        emoji = "🌟" if (title == "Animated Lord" or title == "Champion") else "👑"
                             
-                    # Formato ultracompacto: Solo Emoji
                     lords_text.append(f"{emoji}")
                     
-                # Agruparlos solo con un espacio (sin texto ni puntos)
                 formatted_lords = " ".join(lords_text)
                 embed.add_field(name="Títulos de Personajes", value=formatted_lords, inline=False)
-            else:
-                embed.add_field(
-                    name="Títulos de Personajes", 
-                    value="*Este usuario no ha registrado ningún Lord/Champion con `/lord`.*", 
-                    inline=False
-                )
+            
+            # Cargar Top Personajes
+            top_chars = await db.get_top_characters(target.id, limit=3)
+            if top_chars:
+                top_text = []
+                for char_name, total_games, wins in top_chars:
+                    emoji = get_hero_emoji(char_name, None, {}, True)
+                    winrate = int((wins / total_games) * 100) if total_games > 0 else 0
+                    top_text.append(f"{emoji} **{char_name}** | {winrate}% WR ({total_games} Partidas)")
+                
+                embed.add_field(name="Top Personajes", value="\n".join(top_text), inline=False)
                 
             # Cargar últimas 5 partidas
             recent_matches = await db.get_recent_matches(target.id, limit=5)
@@ -103,13 +94,10 @@ class Profile(commands.Cog):
                     m_k = match[1]
                     m_d = match[2]
                     m_a = match[3]
-                    m_dmg = match[4]
-                    m_heal = match[5]
                     m_outcome = match[6] or "Desconocido"
                     m_char = match[7] or "???"
                     m_mode = match[8] or "Desconocido"
                     m_map = match[9] or "Desconocido"
-                    m_date = match[10]
                     
                     if "victor" in m_outcome.lower() or "win" in m_outcome.lower():
                         prefix = "🔹 VICTORIA"
@@ -118,12 +106,9 @@ class Profile(commands.Cog):
                     else:
                         prefix = "⬜ TERMINADA"
                         
-                    # Conseguir el emoji básico del personaje
-                    from src.utils.parser import get_hero_emoji
                     emoji = get_hero_emoji(m_char, None, {}, True)
                     
                     line = f"{prefix} | {emoji} `{m_k}/{m_d}/{m_a}` | {m_mode} | {m_map}"
-                        
                     history_text.append(line)
                     
                 embed.add_field(name="Historial Reciente (Últimas 5)", value="\n".join(history_text), inline=False)

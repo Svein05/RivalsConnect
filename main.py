@@ -45,7 +45,6 @@ async def main():
     await bot.load_extension("src.cogs.leaderboard")
     await bot.load_extension("src.cogs.settings")
     await bot.load_extension("src.cogs.live_panel")
-    await bot.load_extension("src.cogs.lords")
     await bot.load_extension("src.cogs.profile")
     
     try:

@@ -149,3 +149,35 @@ async def get_recent_matches(discord_id: int, limit: int = 5):
             LIMIT ?
         ''', (discord_id, limit)) as cursor:
             return await cursor.fetchall()
+
+async def update_user_lords(discord_id: int, heroes: list, title_type: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        # Primero borramos todos los títulos de este tipo para este usuario
+        await db.execute('DELETE FROM user_lords WHERE discord_id = ? AND title_type = ?', (discord_id, title_type))
+        # También borramos "Animated Lord" por retrocompatibilidad si están actualizando Champions
+        if title_type == "Champion":
+            await db.execute('DELETE FROM user_lords WHERE discord_id = ? AND title_type = ?', (discord_id, "Animated Lord"))
+            
+        # Insertamos los nuevos
+        for hero in heroes:
+            # Upsert en caso de que accidentalmente el personaje tenga otro título (garantizando exclusividad a nivel DB)
+            await db.execute('''
+                INSERT INTO user_lords (discord_id, character_name, title_type)
+                VALUES (?, ?, ?)
+                ON CONFLICT(discord_id, character_name) DO UPDATE SET title_type = excluded.title_type
+            ''', (discord_id, hero, title_type))
+        await db.commit()
+
+async def get_top_characters(discord_id: int, limit: int = 3):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('''
+            SELECT character_name, 
+                   COUNT(*) as total_games, 
+                   SUM(CASE WHEN outcome = 'Victoria' THEN 1 ELSE 0 END) as wins 
+            FROM matches 
+            WHERE discord_id = ? AND character_name IS NOT NULL AND character_name != '???' 
+            GROUP BY character_name 
+            ORDER BY total_games DESC, wins DESC
+            LIMIT ?
+        ''', (discord_id, limit)) as cursor:
+            return await cursor.fetchall()
