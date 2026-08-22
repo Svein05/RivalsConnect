@@ -71,7 +71,22 @@ class LordsEditView(discord.ui.View):
         
         try:
             await db.update_user_lords(self.discord_id, heroes, self.title_type)
-            await interaction.response.send_message(f"✅ Tus {self.title_type}s han sido guardados correctamente.", ephemeral=True)
+            
+            # Recreate main menu view
+            view = SettingsMenu(self.discord_id)
+            lords, champions = await view.get_user_data()
+            lords_text = ", ".join(lords) if lords else "Ninguno"
+            champions_text = ", ".join(champions) if champions else "Ninguno"
+            
+            embed = discord.Embed(
+                title="⚙️ Configuración de Perfil",
+                description="Aquí puedes administrar los títulos (Lords y Champions) que se muestran en tu perfil de RivalsConnect.\n\nRecuerda que **Lord** y **Champion** son mutuamente excluyentes (un personaje no puede tener ambos títulos a la vez).",
+                color=discord.Color.blue()
+            )
+            embed.add_field(name="👑 Tus Lords Actuales", value=lords_text, inline=False)
+            embed.add_field(name="🌟 Tus Champions Actuales", value=champions_text, inline=False)
+            
+            await interaction.response.edit_message(content=f"✅ Tus {self.title_type}s han sido guardados correctamente.", embed=embed, view=view)
         except Exception as e:
             await interaction.response.send_message("❌ Hubo un error al guardar.", ephemeral=True)
 

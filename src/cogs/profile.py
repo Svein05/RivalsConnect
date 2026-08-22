@@ -80,7 +80,7 @@ class Profile(commands.Cog):
                 fake_lords_dict[str(target.id)] = {char.upper(): title for char, title in user_lords}
                 
             # Cargar Top Personajes
-            top_chars = await db.get_top_characters(target.id, limit=3)
+            top_chars = await db.get_top_characters(target.id, limit=5)
             if top_chars:
                 top_text = []
                 for char_name, total_games, wins in top_chars:

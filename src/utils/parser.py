@@ -182,8 +182,8 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 if obj_mode == "Domination":
                     left = int(objective.get("left_capture", 0))
                     right = int(objective.get("right_capture", 0))
-                    obj_text_ally = f"🟦 | Captura: **{left}%**\n"
-                    obj_text_enemy = f"🟥 | Captura: **{right}%**\n"
+                    obj_text_ally = f"🔵 Captura: **{left}%**"
+                    obj_text_enemy = f"🔴 Captura: **{right}%**"
                 elif obj_mode == "Convoy":
                     chk = int(objective.get("checkpoint", 0))
                     progress_bar = ("🟩" * chk) + ("⬛" * max(0, 3 - chk))
@@ -192,8 +192,13 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                     chk = int(objective.get("checkpoint", 0))
                     obj_footer = f"🎯 Convergencia | Avance: **{chk}** | {role_es}"
                     
-            aliados_text = obj_text_ally + "\n".join(col_aliados) if col_aliados else "Buscando..."
-            enemigos_text = obj_text_enemy + "\n".join(col_enemigos) if col_enemigos else "Buscando..."
+            aliados_text = "\n".join(col_aliados) if col_aliados else "Buscando..."
+            if obj_text_ally:
+                aliados_text += f"\n\n{obj_text_ally}"
+                
+            enemigos_text = "\n".join(col_enemigos) if col_enemigos else "Buscando..."
+            if obj_text_enemy:
+                enemigos_text += f"\n\n{obj_text_enemy}"
                 
             # Añadir las 3 columnas
             if col_aliados:
