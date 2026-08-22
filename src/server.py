@@ -152,7 +152,7 @@ async def handle_overwolf_events(request):
                     
                     for k, v in roster.items():
                         if v.get("is_local"):
-                            current_elo = v.get("elo_score", 0)
+                            current_elo = v.get("elo_score", v.get("ranking_score", v.get("rank_score", v.get("mmr", 0))))
                             local_uid = v.get("uid")
                             break
                             

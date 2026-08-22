@@ -92,8 +92,8 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 else:
                     enemy_bans.append(f"{emoji} {hero_name}")
             
-            if ally_bans: ban_text += "**Aliados:** " + ", ".join(ally_bans) + "\n"
-            if enemy_bans: ban_text += "**Enemigos:** " + ", ".join(enemy_bans)
+            if ally_bans: ban_text += f"**{t('ally_team', lang)}:** " + ", ".join(ally_bans) + "\n"
+            if enemy_bans: ban_text += f"**{t('enemy_team', lang)}:** " + ", ".join(enemy_bans)
 
         if event_name == "match_start":
             embed = discord.Embed(
@@ -251,7 +251,7 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 
                 # Formatear el score calculando los espacios matemáticamente para centrar la barra en texto plano
                 score_block = "\n".join(col_score)
-                embed.add_field(name="\u200b \u200b \u200b " + t("kda", lang), value=score_block, inline=True)
+                embed.add_field(name="\u200b \u200b \u200b \u200b \u200b \u200b " + t("kda", lang), value=score_block, inline=True)
                 
                 embed.add_field(name=t("enemy_team", lang), value=enemigos_text, inline=True)
             else:
@@ -261,9 +261,8 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 embed.add_field(name="\u200b", value=obj_footer, inline=False)
             
             # Personajes Baneados (si los hay)
-            bans = payload.get("bans")
-            if bans and bans != "Ninguno" and bans != "[]":
-                embed.add_field(name=t("bans", lang), value=f"*{bans}*", inline=False)
+            if ban_text:
+                embed.add_field(name="🚫 " + t("bans", lang), value=ban_text, inline=False)
                 
             # Formatear estadísticas del jugador
             stats = payload.get("stats", {})
