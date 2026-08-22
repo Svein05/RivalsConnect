@@ -12,6 +12,7 @@ class RoleSelect(discord.ui.Select):
             super().__init__(placeholder=placeholder, min_values=0, max_values=len(options), options=options)
 
     async def callback(self, interaction: discord.Interaction):
+        self.view.interacted_selects.add(self.custom_id)
         await interaction.response.defer()
 
 class LordsEditView(discord.ui.View):
@@ -19,6 +20,7 @@ class LordsEditView(discord.ui.View):
         super().__init__(timeout=300)
         self.discord_id = discord_id
         self.title_type = title_type
+        self.interacted_selects = set()
         
         def make_options(names):
             opts = []
@@ -58,9 +60,14 @@ class LordsEditView(discord.ui.View):
     @discord.ui.button(label="💾 Guardar Cambios", style=discord.ButtonStyle.green, row=4)
     async def save_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         heroes = []
-        if self.select_1.values and self.select_1.values[0] != "NONE": heroes.extend(self.select_1.values)
-        if self.select_2.values and self.select_2.values[0] != "NONE": heroes.extend(self.select_2.values)
-        if self.select_3.values and self.select_3.values[0] != "NONE": heroes.extend(self.select_3.values)
+        for select in [self.select_1, self.select_2, self.select_3]:
+            if select.custom_id in self.interacted_selects:
+                if select.values and select.values[0] != "NONE":
+                    heroes.extend(select.values)
+            else:
+                # El usuario no tocó este menú, rescatamos lo que tenía seleccionado por defecto
+                defaults = [opt.value for opt in select.options if opt.default]
+                heroes.extend(defaults)
         
         try:
             await db.update_user_lords(self.discord_id, heroes, self.title_type)
