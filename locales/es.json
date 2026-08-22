@@ -81,5 +81,5 @@
   "cmd_profile": "Mira las estadísticas, victorias y Lords de un jugador.",
   "cmd_leaderboard": "Muestra el top de jugadores del servidor.",
   "help_categories_title": "» Categorías",
-  "help_categories_value": "`\n⚙️ Configuración      📊 Estadísticas\n`"
+  "help_categories_value": "```\n⚙️ Configuración      📊 Estadísticas\n```"
 }
