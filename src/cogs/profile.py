@@ -74,12 +74,17 @@ class Profile(commands.Cog):
                 formatted_lords = " ".join(lords_text)
                 embed.add_field(name="Títulos de Personajes", value=formatted_lords, inline=False)
             
+            # Crear diccionario falso para que get_hero_emoji procese los Lords correctamente
+            fake_lords_dict = {}
+            if user_lords:
+                fake_lords_dict[str(target.id)] = {char.upper(): title for char, title in user_lords}
+                
             # Cargar Top Personajes
             top_chars = await db.get_top_characters(target.id, limit=3)
             if top_chars:
                 top_text = []
                 for char_name, total_games, wins in top_chars:
-                    emoji = get_hero_emoji(char_name, None, {}, True)
+                    emoji = get_hero_emoji(char_name, str(target.id), fake_lords_dict, True)
                     winrate = int((wins / total_games) * 100) if total_games > 0 else 0
                     top_text.append(f"{emoji} **{char_name}** | {winrate}% WR ({total_games} Partidas)")
                 
@@ -107,7 +112,7 @@ class Profile(commands.Cog):
                     else:
                         prefix = "⬜ TERMINADA"
                         
-                    emoji = get_hero_emoji(m_char, None, {}, True)
+                    emoji = get_hero_emoji(m_char, str(target.id), fake_lords_dict, True)
                     
                     line = f"{prefix} | {emoji} `{m_k}/{m_d}/{m_a}` | {m_mode} | {m_map}"
                     history_text.append(line)
