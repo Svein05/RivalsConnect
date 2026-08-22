@@ -261,9 +261,8 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 embed.add_field(name="\u200b", value=obj_footer, inline=False)
             
             # Personajes Baneados (si los hay)
-            bans = payload.get("bans")
-            if bans and bans != "Ninguno" and bans != "[]":
-                embed.add_field(name=t("bans", lang), value=f"*{bans}*", inline=False)
+            if ban_text:
+                embed.add_field(name="🚫 " + t("bans", lang), value=ban_text, inline=False)
                 
             # Formatear estadísticas del jugador
             stats = payload.get("stats", {})
