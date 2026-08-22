@@ -55,22 +55,66 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
             
         roster = payload.get("roster", {})
         
+        # --- PARSE BANS (Para saber si es competitivo desde el inicio) ---
+        bans = payload.get("bans")
+        game_type = payload.get("game_type", "")
+        is_competitive = (game_type.lower() == "competitive")
+        parsed_bans = None
+        
+        if isinstance(bans, str) and bans.strip().startswith("["):
+            import json
+            try:
+                parsed_bans = json.loads(bans)
+                is_competitive = True
+            except:
+                pass
+        elif isinstance(bans, list):
+            parsed_bans = bans
+            is_competitive = True
+            
+        modo_display = game_type if game_type else ("Competitivo" if is_competitive else "Casual")
+        
+        # Bloque de renderizado de bans compartido
+        ban_text = ""
+        if parsed_bans:
+            ally_bans = []
+            enemy_bans = []
+            for b in parsed_bans:
+                char_name = b.get("character_name", "")
+                is_team = b.get("is_teammate", False)
+                uid = b.get("uid", "")
+                hero_data = get_hero_data(char_name)
+                hero_name = hero_data["display_name"]
+                emoji = get_hero_emoji(char_name, uid, lords_dict, is_team)
+                
+                if is_team:
+                    ally_bans.append(f"{emoji} {hero_name}")
+                else:
+                    enemy_bans.append(f"{emoji} {hero_name}")
+            
+            if ally_bans: ban_text += "**Aliados:** " + ", ".join(ally_bans) + "\n"
+            if enemy_bans: ban_text += "**Enemigos:** " + ", ".join(enemy_bans)
+
         if event_name == "match_start":
             embed = discord.Embed(
-                title=f"{modo} | {mapa}",
+                title=f"{modo_display} - {modo} | {mapa}",
                 description="Partida encontrada y cargando...",
                 color=discord.Color.brand_green(),
                 timestamp=discord.utils.utcnow()
             )
             if discord_avatar:
                 embed.set_author(name=f"{discord_name} está en partida", icon_url=discord_avatar)
+                
+            if ban_text:
+                embed.add_field(name="🚫 " + t("bans", lang), value=ban_text, inline=False)
+                
             return embed
             
         elif event_name in ["match_playing", "match_end"]:
             # Configurar el embed base dependiendo del estado
             if event_name == "match_playing":
                 embed = discord.Embed(
-                    title=f"{modo} | {mapa}",
+                    title=f"{modo_display} - {modo} | {mapa}",
                     color=discord.Color.gold(),
                     timestamp=discord.utils.utcnow()
                 )
@@ -89,7 +133,7 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                     title_prefix = "🛑 Partida Finalizada"
                     
                 embed = discord.Embed(
-                    title=f"{title_prefix} | {modo} | {mapa}",
+                    title=f"{title_prefix} | {modo_display} - {modo} | {mapa}",
                     color=final_color,
                     timestamp=discord.utils.utcnow()
                 )
@@ -207,7 +251,7 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 
                 # Formatear el score calculando los espacios matemáticamente para centrar la barra en texto plano
                 score_block = "\n".join(col_score)
-                embed.add_field(name=t("kda", lang), value=score_block, inline=True)
+                embed.add_field(name="\u200b \u200b \u200b " + t("kda", lang), value=score_block, inline=True)
                 
                 embed.add_field(name=t("enemy_team", lang), value=enemigos_text, inline=True)
             else:

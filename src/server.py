@@ -156,7 +156,11 @@ async def handle_overwolf_events(request):
                             local_uid = v.get("uid")
                             break
                             
-                    if current_elo > 0:
+                    game_type = data.get("game_type", "")
+                    has_bans = bool(data.get("bans"))
+                    is_competitive = (game_type.lower() == "competitive") or has_bans
+
+                    if current_elo > 0 and is_competitive:
                         old_elo = await db.update_user_elo(discord_id, current_elo, local_uid)
                         if old_elo > 0:
                             elo_change = current_elo - old_elo
