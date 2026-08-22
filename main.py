@@ -47,6 +47,7 @@ async def main():
     await bot.load_extension("src.cogs.live_panel")
     await bot.load_extension("src.cogs.profile")
     await bot.load_extension("src.cogs.help")
+    await bot.load_extension("src.cogs.admin")
     
     try:
         await bot.start(TOKEN)

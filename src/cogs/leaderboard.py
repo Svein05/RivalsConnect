@@ -13,7 +13,7 @@ async def update_leaderboard_panel(bot, guild_id):
                     return
                 channel_id, msg_id = row
                 
-            async with db.execute('SELECT discord_name, current_elo FROM users WHERE current_elo > 0 ORDER BY current_elo DESC LIMIT 10') as cursor:
+            async with db.execute('SELECT discord_name, elo_score FROM users WHERE elo_score > 0 ORDER BY elo_score DESC LIMIT 10') as cursor:
                 top_players = await cursor.fetchall()
                 
         channel = bot.get_channel(channel_id)
@@ -35,10 +35,12 @@ async def update_leaderboard_panel(bot, guild_id):
             embed.description = "Aún no hay partidas jugadas para mostrar ranking."
         else:
             medals = ["🥇", "🥈", "🥉"]
+            import src.database.db as db
             for index, player in enumerate(top_players):
                 name, elo = player
                 rank_icon = medals[index] if index < 3 else f"**{index+1}.**"
-                embed.add_field(name=f"{rank_icon} {name}", value=f"**{elo}** ELO", inline=False)
+                rango = await db.get_user_rank(elo)
+                embed.add_field(name=f"{rank_icon} {name}", value=f"**{rango}** | {elo} ELO", inline=False)
                 
         embed.set_footer(text="RivalsConnect | Actualización automática")
         await msg.edit(embed=embed)
@@ -55,7 +57,7 @@ class Leaderboard(commands.Cog):
         
         # Buscar los top 10 usuarios en BD
         async with aiosqlite.connect("rivalsconnect.db") as database:
-            async with database.execute('SELECT discord_name, current_elo, highest_elo FROM users WHERE current_elo > 0 ORDER BY current_elo DESC LIMIT 10') as cursor:
+            async with database.execute('SELECT discord_name, elo_score FROM users WHERE elo_score > 0 ORDER BY elo_score DESC LIMIT 10') as cursor:
                 top_players = await cursor.fetchall()
                 
         if not top_players:
