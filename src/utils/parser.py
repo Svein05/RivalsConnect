@@ -188,10 +188,10 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                     k = al.get("kills", 0)
                     d = al.get("deaths", 0)
                     a = al.get("assists", 0)
-                    al_kda = f"{k}/{d}/{a}".rjust(7, ' ')
+                    al_kda = "\u200b" + f"{k}/{d}/{a}".rjust(8, '\u2007')
                 else:
                     col_aliados.append("👤 ABANDONO")
-                    al_kda = "-/-/-".rjust(7, ' ')
+                    al_kda = "\u200b" + "-/-/-".rjust(8, '\u2007')
                     
                 if en:
                     uid = en.get("uid", "")
@@ -206,12 +206,12 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                     k = en.get("kills", 0)
                     d = en.get("deaths", 0)
                     a = en.get("assists", 0)
-                    en_kda = f"{k}/{d}/{a}".ljust(7, ' ')
+                    en_kda = f"{k}/{d}/{a}".ljust(8, '\u2007')
                 else:
                     col_enemigos.append("👤 ABANDONO")
-                    en_kda = "-/-/-".ljust(7, ' ')
+                    en_kda = "-/-/-".ljust(8, '\u2007')
                     
-                col_score.append(f"` {al_kda} | {en_kda} `")
+                col_score.append(f"{al_kda} | {en_kda}")
                 
             # Extraer progreso del objetivo para inyectarlo al final de la partida también
             objective = payload.get("objective")
