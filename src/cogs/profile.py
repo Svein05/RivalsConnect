@@ -14,6 +14,7 @@ class Profile(commands.Cog):
     @app_commands.command(name="profile", description="Muestra el perfil y estadísticas de un usuario (o el tuyo)")
     async def profile(self, interaction: discord.Interaction, usuario: discord.Member = None):
         target = usuario or interaction.user
+        lang = await db.get_user_language(interaction.user.id)
         
         try:
             # Buscar en la DB
