@@ -251,7 +251,7 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 
                 # Formatear el score calculando los espacios matemáticamente para centrar la barra en texto plano
                 score_block = "\n".join(col_score)
-                embed.add_field(name="\u200b \u200b \u200b " + t("kda", lang), value=score_block, inline=True)
+                embed.add_field(name="\u200b \u200b \u200b \u200b \u200b \u200b " + t("kda", lang), value=score_block, inline=True)
                 
                 embed.add_field(name=t("enemy_team", lang), value=enemigos_text, inline=True)
             else:
