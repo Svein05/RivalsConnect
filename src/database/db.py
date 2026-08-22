@@ -62,6 +62,32 @@ async def init_db():
                 leaderboard_msg_id INTEGER
             )
         ''')
+        
+        await db.execute('''
+            CREATE TABLE IF NOT EXISTS elo_thresholds (
+                rank_id INTEGER PRIMARY KEY,
+                rank_name TEXT UNIQUE,
+                min_elo INTEGER
+            )
+        ''')
+        
+        # Populate default ranks if empty
+        async with db.execute('SELECT COUNT(*) FROM elo_thresholds') as cursor:
+            count = (await cursor.fetchone())[0]
+            if count == 0:
+                ranks = [
+                    (0, "Bronce III"), (1, "Bronce II"), (2, "Bronce I"),
+                    (3, "Plata III"), (4, "Plata II"), (5, "Plata I"),
+                    (6, "Oro III"), (7, "Oro II"), (8, "Oro I"),
+                    (9, "Platino III"), (10, "Platino II"), (11, "Platino I"),
+                    (12, "Diamante III"), (13, "Diamante II"), (14, "Diamante I"),
+                    (15, "Gran Maestro III"), (16, "Gran Maestro II"), (17, "Gran Maestro I"),
+                    (18, "Celestial III"), (19, "Celestial II"), (20, "Celestial I"),
+                    (21, "Eternidad"), (22, "One Above All")
+                ]
+                for r_id, r_name in ranks:
+                    await db.execute('INSERT INTO elo_thresholds (rank_id, rank_name, min_elo) VALUES (?, ?, 99999)', (r_id, r_name))
+        
         await db.commit()
 
 async def get_user_by_code(code: str):
@@ -200,3 +226,27 @@ async def set_user_language(discord_id: int, language: str):
         await db.execute('UPDATE users SET language = ? WHERE discord_id = ?', (language, discord_id))
         await db.commit()
 
+
+
+async def update_rank_threshold(rank_name: str, elo: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT min_elo FROM elo_thresholds WHERE rank_name = ?', (rank_name,)) as cursor:
+            row = await cursor.fetchone()
+            if row:
+                current_min = row[0]
+                new_min = min(current_min, elo) if current_min != 99999 else elo
+                await db.execute('UPDATE elo_thresholds SET min_elo = ? WHERE rank_name = ?', (new_min, rank_name))
+                await db.commit()
+                return new_min
+        return None
+
+async def get_user_rank(elo: int):
+    if elo <= 0: return "Desclasificado"
+    
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT rank_name, min_elo FROM elo_thresholds WHERE min_elo != 99999 ORDER BY rank_id DESC') as cursor:
+            rows = await cursor.fetchall()
+            for r_name, r_min in rows:
+                if elo >= r_min:
+                    return r_name
+    return "Desclasificado"

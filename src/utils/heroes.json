@@ -37,7 +37,7 @@
     "rocket raccoon": {"role": "Estratega", "display_name": "Rocket Raccoon", "short_code": "rocketr"},
     "rogue": {"role": "Duelista", "display_name": "Rogue", "short_code": "rogue"},
     "scarlet witch": {"role": "Duelista", "display_name": "Scarlet Witch", "short_code": "scarletw"},
-    "spider-man": {"role": "Duelista", "display_name": "Spider-Man", "short_code": "spiderm"},
+    "spider-man": {"role": "Duelista", "display_name": "Spider-Man", "short_code": "spiderman"},
     "squirrel girl": {"role": "Duelista", "display_name": "Squirrel Girl", "short_code": "squirrelg"},
     "star-lord": {"role": "Duelista", "display_name": "Star-Lord", "short_code": "starl"},
     "storm": {"role": "Duelista", "display_name": "Storm", "short_code": "storm"},
