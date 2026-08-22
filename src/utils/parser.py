@@ -92,8 +92,8 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 else:
                     enemy_bans.append(f"{emoji} {hero_name}")
             
-            if ally_bans: ban_text += "**Aliados:** " + ", ".join(ally_bans) + "\n"
-            if enemy_bans: ban_text += "**Enemigos:** " + ", ".join(enemy_bans)
+            if ally_bans: ban_text += f"**{t('ally_team', lang)}:** " + ", ".join(ally_bans) + "\n"
+            if enemy_bans: ban_text += f"**{t('enemy_team', lang)}:** " + ", ".join(enemy_bans)
 
         if event_name == "match_start":
             embed = discord.Embed(
