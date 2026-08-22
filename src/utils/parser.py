@@ -132,8 +132,9 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                     final_color = discord.Color.light_grey()
                     title_prefix = "🛑 Partida Finalizada"
                     
+                elo_text = f" (+{elo_change} ELO)" if elo_change > 0 else (f" ({elo_change} ELO)" if elo_change < 0 else "")
                 embed = discord.Embed(
-                    title=f"{title_prefix} | {modo_display} - {modo} | {mapa}",
+                    title=f"{title_prefix}{elo_text} | {modo_display} - {modo} | {mapa}",
                     color=final_color,
                     timestamp=discord.utils.utcnow()
                 )
