@@ -50,12 +50,13 @@ class Profile(commands.Cog):
             # Cargar los Lords del usuario
             user_lords = await db.get_user_lords(target.id)
             
-            from src.utils.parser import APP_EMOJIS, format_char_name, get_hero_emoji
+            from src.utils.parser import APP_EMOJIS, get_hero_emoji
+            from src.utils.heroes import get_hero_data
             
             if user_lords:
                 lords_text = []
                 for char, title in user_lords:
-                    short_name = format_char_name(char)
+                    short_name = get_hero_data(char)["short_code"]
                     
                     if title == "Animated Lord" or title == "Champion":
                         t = "lordani"
