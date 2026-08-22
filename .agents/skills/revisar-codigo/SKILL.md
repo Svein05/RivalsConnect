@@ -23,9 +23,11 @@ Al trabajar en este proyecto, DEBES seguir estrictamente estas reglas:
 - **CRÍTICO:** DEBES preservar el historial para que se vean las burbujas o divisiones en herramientas visuales de Git (como SourceTree). Utiliza SIEMPRE el comando \git merge --no-ff nombre-de-rama\.
 - NO borres las ramas inmediatamente del historial remoto, de forma que el usuario pueda ver el progreso.
 
-## 4. Despliegue a Producción
-- Solo después de que el usuario verifique y apruebe manualmente el código en \develop\, se procederá a fusionar \develop\ en \main\.
-- Al fusionar a \main\, usa también \git merge --no-ff develop\ para mantener el gráfico visible.
+## 4. Despliegue a Producción (REGLA DE HIERRO)
+- **TÚ SOLO TRABAJARÁS AUTOMÁTICAMENTE EN \develop\ Y SUS RAMAS EXTRAS.**
+- **SIEMPRE** debes pedirme permiso y confirmación antes de hacer un merge o push hacia \main\.
+- **NUNCA** debes fusionar nada a \main\ por tu cuenta sin que yo te haya dado luz verde explícitamente primero.
+- Al recibir mi autorización y fusionar a \main\, usa también \git merge --no-ff develop\ para mantener el gráfico visible.
 
 ## 5. Revisión de Código
 - Antes de cada commit o push, SIEMPRE revisa el código meticulosamente.
