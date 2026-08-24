@@ -2,10 +2,14 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import aiosqlite
+from src.utils.i18n import t, translate_rank
 
 async def update_leaderboard_panel(bot, guild_id):
     """Actualiza la tabla de líderes estática."""
     try:
+        from src.database import db as database_module
+        lang = await database_module.get_guild_language(guild_id)
+
         async with aiosqlite.connect("rivalsconnect.db") as db:
             async with db.execute('SELECT leaderboard_channel_id, leaderboard_msg_id FROM guild_config WHERE guild_id = ?', (guild_id,)) as cursor:
                 row = await cursor.fetchone()
@@ -25,24 +29,25 @@ async def update_leaderboard_panel(bot, guild_id):
             return
             
         embed = discord.Embed(
-            title="🏆 Clasificación del Servidor",
-            description="Ranking oficial de RivalsConnect.",
+            title=t("lb_title", lang),
+            description=t("lb_panel_desc", lang),
             color=discord.Color.gold(),
             timestamp=discord.utils.utcnow()
         )
         
         if not top_players:
-            embed.description = "Aún no hay partidas jugadas para mostrar ranking."
+            embed.description = t("lb_panel_empty", lang)
         else:
             medals = ["🥇", "🥈", "🥉"]
-            import src.database.db as db
+            import src.database.db as db_mod
             for index, player in enumerate(top_players):
                 name, elo = player
                 rank_icon = medals[index] if index < 3 else f"**{index+1}.**"
-                rango = await db.get_user_rank(elo)
+                rank_key = await db_mod.get_user_rank(elo)
+                rango = translate_rank(rank_key, lang)
                 embed.add_field(name=f"{rank_icon} {name}", value=f"**{rango}** | {elo} ELO", inline=False)
                 
-        embed.set_footer(text="RivalsConnect | Actualización automática")
+        embed.set_footer(text=t("lb_panel_footer", lang))
         await msg.edit(embed=embed)
     except Exception as e:
         print(f"Error actualizando leaderboard: {e}")
@@ -53,7 +58,8 @@ class Leaderboard(commands.Cog):
 
     @app_commands.command(name="leaderboard", description="Muestra los jugadores con mayor ELO en el servidor.")
     async def leaderboard(self, interaction: discord.Interaction):
-        import aiosqlite
+        from src.database import db as database_module
+        lang = await database_module.get_user_language(interaction.user.id)
         
         # Buscar los top 10 usuarios en BD
         async with aiosqlite.connect("rivalsconnect.db") as database:
@@ -61,12 +67,12 @@ class Leaderboard(commands.Cog):
                 top_players = await cursor.fetchall()
                 
         if not top_players:
-            await interaction.response.send_message("Aún no hay suficientes partidas jugadas para mostrar una clasificación.", ephemeral=True)
+            await interaction.response.send_message(t("lb_empty", lang), ephemeral=True)
             return
             
         embed = discord.Embed(
-            title="🏆 Clasificación del Servidor",
-            description="Los mejores agentes de Marvel Rivals.",
+            title=t("lb_title", lang),
+            description=t("lb_desc", lang),
             color=discord.Color.gold()
         )
         
@@ -79,8 +85,9 @@ class Leaderboard(commands.Cog):
             rank_icon = medals[index] if index < 3 else f"**{index+1}.**"
             embed.add_field(name=f"{rank_icon} {name}", value=f"**{elo}** ELO", inline=False)
             
-        embed.set_footer(text="RivalsConnect | Se actualiza en tiempo real")
+        embed.set_footer(text=t("lb_footer", lang))
         await interaction.response.send_message(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(Leaderboard(bot))
+

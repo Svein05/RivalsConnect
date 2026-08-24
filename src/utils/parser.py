@@ -72,7 +72,7 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
             parsed_bans = bans
             is_competitive = True
             
-        modo_display = game_type if game_type else ("Competitivo" if is_competitive else "Casual")
+        modo_display = game_type if game_type else (t("mode_competitive", lang) if is_competitive else t("mode_casual", lang))
         
         # Bloque de renderizado de bans compartido
         ban_text = ""
@@ -98,12 +98,12 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
         if event_name in ["match_start", "match_update_lobby"]:
             embed = discord.Embed(
                 title=f"{modo_display} - {modo} | {mapa}",
-                description="Partida encontrada y cargando...",
+                description=t("match_desc_loading", lang),
                 color=discord.Color.brand_green(),
                 timestamp=discord.utils.utcnow()
             )
             if discord_avatar:
-                embed.set_author(name=f"{discord_name} está en partida", icon_url=discord_avatar)
+                embed.set_author(name=t("author_in_game", lang, name=discord_name), icon_url=discord_avatar)
                 
             if ban_text:
                 embed.add_field(name=t("bans", lang), value=ban_text, inline=False)
@@ -119,18 +119,18 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                     timestamp=discord.utils.utcnow()
                 )
                 if discord_avatar:
-                    embed.set_author(name=f"{discord_name} - En Progreso", icon_url=discord_avatar)
+                    embed.set_author(name=t("author_in_progress", lang, name=discord_name), icon_url=discord_avatar)
             else:
                 outcome = payload.get("outcome", "Desconocido").lower()
                 if "victor" in outcome or "win" in outcome:
                     final_color = discord.Color.brand_green()
-                    title_prefix = "🏆 ¡VICTORIA!"
+                    title_prefix = t("outcome_victory", lang)
                 elif "defeat" in outcome or "loss" in outcome or "derrot" in outcome:
                     final_color = discord.Color.brand_red()
-                    title_prefix = "☠️ DERROTA"
+                    title_prefix = t("outcome_defeat", lang)
                 else:
                     final_color = discord.Color.light_grey()
-                    title_prefix = "🛑 Partida Finalizada"
+                    title_prefix = t("outcome_ended", lang)
                     
                 embed = discord.Embed(
                     title=f"{title_prefix} | {modo_display} - {modo} | {mapa}",
@@ -138,7 +138,7 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                     timestamp=discord.utils.utcnow()
                 )
                 if discord_avatar:
-                    embed.set_author(name=f"{discord_name} - Resumen Final", icon_url=discord_avatar)
+                    embed.set_author(name=t("author_summary", lang, name=discord_name), icon_url=discord_avatar)
 
             # --- ZOE BOT 3 COLUMNS FORMAT ---
             aliados_list = []
@@ -147,17 +147,17 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                 if p.get("is_teammate"): aliados_list.append(p)
                 else: enemigos_list.append(p)
                 
-            def get_role_priority(role_name):
-                if role_name == "Vanguardia": return 1
-                if role_name == "Duelista": return 2
-                if role_name == "Estratega": return 3
+            def get_role_priority(role_key):
+                if role_key == "vanguard": return 1
+                if role_key == "duelist": return 2
+                if role_key == "strategist": return 3
                 return 4
 
                 # Fix sorting by adding Player name as fallback
             def sort_players(p):
                 char_name = p.get("character_name", "")
                 hdata = get_hero_data(char_name)
-                role_prio = get_role_priority(hdata["role"])
+                role_prio = get_role_priority(hdata["role_key"])
                 disp_name = hdata["display_name"]
                 return (role_prio, disp_name, p.get("name", ""))
 
@@ -175,7 +175,7 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
             for al, en in zip(aliados_list, enemigos_list):
                 if al:
                     uid = al.get("uid", "")
-                    name = al.get("name", "Anónimo").replace("*****", "Anónimo")
+                    name = al.get("name", t("anon", lang)).replace("*****", t("anon", lang))
                     hero = get_hero_data(al.get("character_name", ""))["display_name"]
                     emoji = get_hero_emoji(al.get("character_name", ""), uid, lords_dict, True)
                     short_name = name[:10] + ".." if len(name) > 12 else name
@@ -190,12 +190,12 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                     a = al.get("assists", 0)
                     al_kda = "\u200b" + f"{k}/{d}/{a}".rjust(8, '\u2007')
                 else:
-                    col_aliados.append("👤 ABANDONO")
+                    col_aliados.append(t("abandon", lang))
                     al_kda = "\u200b" + "-/-/-".rjust(8, '\u2007')
                     
                 if en:
                     uid = en.get("uid", "")
-                    name = en.get("name", "Anónimo").replace("*****", "Anónimo")
+                    name = en.get("name", t("anon", lang)).replace("*****", t("anon", lang))
                     hero = get_hero_data(en.get("character_name", ""))["display_name"]
                     emoji = get_hero_emoji(en.get("character_name", ""), uid, lords_dict, False)
                     short_name = name[:10] + ".." if len(name) > 12 else name
@@ -208,7 +208,7 @@ def create_embed_from_data(payload, discord_name="Usuario", discord_avatar=None,
                     a = en.get("assists", 0)
                     en_kda = f"{k}/{d}/{a}".ljust(8, '\u2007')
                 else:
-                    col_enemigos.append("👤 ABANDONO")
+                    col_enemigos.append(t("abandon", lang))
                     en_kda = "-/-/-".ljust(8, '\u2007')
                     
                 col_score.append(f"{al_kda} | {en_kda}")

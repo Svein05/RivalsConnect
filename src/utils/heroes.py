@@ -19,7 +19,7 @@ def get_hero_data(raw_name):
     Si no lo encuentra, devuelve un diccionario genérico.
     """
     if not raw_name:
-        return {"role": "Desconocido", "display_name": "???", "short_code": "unknown"}
+        return {"role": "Desconocido", "role_key": "unknown", "display_name": "???", "short_code": "unknown"}
         
     clean_name = raw_name.lower().strip()
     
@@ -40,4 +40,4 @@ def get_hero_data(raw_name):
     else:
         short = words[0] + words[1][0]
         
-    return {"role": "Desconocido", "display_name": raw_name, "short_code": short}
+    return {"role": "Desconocido", "role_key": "unknown", "display_name": raw_name, "short_code": short}
