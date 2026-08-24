@@ -38,3 +38,7 @@ def t(key: str, lang: str = 'es', **kwargs) -> str:
         except KeyError:
             return text
     return text
+
+def translate_rank(rank_key: str, lang: str = 'es') -> str:
+    """Translates a neutral rank key (e.g. 'grand_master_1') to the localized string."""
+    return t(f"rank_{rank_key}", lang)

@@ -32,13 +32,14 @@ class HelpDropdown(discord.ui.Select):
             embed.add_field(name="/setup", value=t("cmd_setup", self.lang), inline=False)
             embed.add_field(name="/configprofile", value=t("cmd_configprofile", self.lang), inline=False)
             embed.add_field(name="/language", value=t("cmd_language", self.lang), inline=False)
+            embed.add_field(name="/configserver", value=t("cmd_configserver", self.lang), inline=False)
             
         elif self.values[0] == "stats":
             embed.title = t("help_cat_stats", self.lang)
             embed.add_field(name="/profile", value=t("cmd_profile", self.lang), inline=False)
             embed.add_field(name="/leaderboard", value=t("cmd_leaderboard", self.lang), inline=False)
             
-        embed.set_footer(text="RivalsConnect | Datos Oficiales")
+        embed.set_footer(text=t("footer_official", self.lang))
         
         # Reconstruir la vista para mostrar el botón de Inicio y mantener el dropdown
         view.clear_items()
@@ -83,7 +84,7 @@ def build_home_embed(lang):
         description=t("help_desc_main", lang),
         color=discord.Color.blue()
     )
-    embed.add_field(name="» Menú de ayuda", value=t("help_commands_total", lang, num=5), inline=False)
+    embed.add_field(name=t("help_menu_header", lang), value=t("help_commands_total", lang, num=5), inline=False)
     
     # Lista de categorías
     embed.add_field(name=t("help_categories_title", lang), value=t("help_categories_value", lang), inline=False)

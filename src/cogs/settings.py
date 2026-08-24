@@ -5,9 +5,9 @@ from src.database import db
 from src.utils.i18n import t
 
 class RoleSelect(discord.ui.Select):
-    def __init__(self, placeholder, options):
+    def __init__(self, placeholder, options, lang="es"):
         if not options:
-            options = [discord.SelectOption(label="No hay opciones disponibles", value="NONE")]
+            options = [discord.SelectOption(label=t("no_options", lang), value="NONE")]
             super().__init__(placeholder=placeholder, min_values=0, max_values=1, options=options, disabled=True)
         else:
             super().__init__(placeholder=placeholder, min_values=0, max_values=len(options), options=options)
@@ -17,10 +17,11 @@ class RoleSelect(discord.ui.Select):
         await interaction.response.defer()
 
 class LordsEditView(discord.ui.View):
-    def __init__(self, discord_id, title_type, owned_titles, opposite_titles):
+    def __init__(self, discord_id, title_type, owned_titles, opposite_titles, lang="es"):
         super().__init__(timeout=300)
         self.discord_id = discord_id
         self.title_type = title_type
+        self.lang = lang
         self.interacted_selects = set()
         
         def make_options(names):
@@ -38,7 +39,7 @@ class LordsEditView(discord.ui.View):
             "Deadpool", "Devil Dinosaur", "Doctor Strange", "Elsa Bloodstone", 
             "Emma Frost", "Gambit", "Groot", "Hawkeye", "Hela", "Hulk", "Human Torch"
         ]
-        self.select_1 = RoleSelect(t("group_1", self.lang), make_options(list_1))
+        self.select_1 = RoleSelect(t("group_1", self.lang), make_options(list_1), self.lang)
         self.add_item(self.select_1)
         
         list_2 = [
@@ -47,7 +48,7 @@ class LordsEditView(discord.ui.View):
             "Mister Fantastic", "Moon Knight", "Namor", "Peni Parker", 
             "Phoenix", "Psylocke", "Punisher"
         ]
-        self.select_2 = RoleSelect(t("group_2", self.lang), make_options(list_2))
+        self.select_2 = RoleSelect(t("group_2", self.lang), make_options(list_2), self.lang)
         self.add_item(self.select_2)
         
         list_3 = [
@@ -55,7 +56,7 @@ class LordsEditView(discord.ui.View):
             "Squirrel Girl", "Star-Lord", "Storm", "The Hood", "The Thing", 
             "Thor", "Ultron", "Venom", "White Fox", "Winter Soldier", "Wolverine"
         ]
-        self.select_3 = RoleSelect(t("group_3", self.lang), make_options(list_3))
+        self.select_3 = RoleSelect(t("group_3", self.lang), make_options(list_3), self.lang)
         self.add_item(self.select_3)
         self.save_button.label = t("btn_save", self.lang)
 
@@ -78,16 +79,16 @@ class LordsEditView(discord.ui.View):
             # Recreate main menu view
             view = SettingsMenu(self.discord_id, self.lang)
             lords, champions = await view.get_user_data()
-            lords_text = ", ".join(lords) if lords else t("none", lang)
-            champions_text = ", ".join(champions) if champions else t("none", lang)
+            lords_text = ", ".join(lords) if lords else t("none", self.lang)
+            champions_text = ", ".join(champions) if champions else t("none", self.lang)
             
             embed = discord.Embed(
                 title=t("settings_title", self.lang),
                 description=t("settings_desc", self.lang),
                 color=discord.Color.blue()
             )
-            embed.add_field(name=t("settings_lords_current", lang), value=lords_text, inline=False)
-            embed.add_field(name=t("settings_champs_current", lang), value=champions_text, inline=False)
+            embed.add_field(name=t("settings_lords_current", self.lang), value=lords_text, inline=False)
+            embed.add_field(name=t("settings_champs_current", self.lang), value=champions_text, inline=False)
             
             await interaction.response.edit_message(content=t("save_success", self.lang, title_type=self.title_type), embed=embed, view=view)
         except Exception as e:
@@ -175,17 +176,17 @@ class Settings(commands.Cog):
     ):
         await interaction.response.defer(ephemeral=True)
         
-        # Enviar mensajes placeholder
+        lang = await db.get_user_language(interaction.user.id)
         embed_panel = discord.Embed(
-            title="📡 Panel de Información en Vivo",
-            description="Esperando a que los jugadores se conecten...",
+            title=t("setup_panel_title", lang),
+            description=t("setup_panel_desc", lang),
             color=discord.Color.blue()
         )
         msg_panel = await canal_panel_vivo.send(embed=embed_panel)
         
         embed_leaderboard = discord.Embed(
-            title="🏆 Clasificación del Servidor",
-            description="Nadie ha jugado partidas aún.",
+            title=t("setup_lb_title", lang),
+            description=t("setup_lb_desc", lang),
             color=discord.Color.gold()
         )
         msg_leaderboard = await canal_leaderboard.send(embed=embed_leaderboard)
@@ -212,7 +213,21 @@ class Settings(commands.Cog):
             ))
             await database.commit()
             
-        await interaction.followup.send("✅ Canales configurados con éxito. Los paneles se actualizarán automáticamente.")
+        await interaction.followup.send(t("setup_success", lang))
+
+    @app_commands.command(name="configserver", description="Configure server language and settings / Configura el idioma del servidor.")
+    @app_commands.default_permissions(administrator=True)
+    @app_commands.choices(idioma=[
+        app_commands.Choice(name="🇪🇸 Español", value="es"),
+        app_commands.Choice(name="🇺🇸 English", value="en")
+    ])
+    async def configserver(self, interaction: discord.Interaction, idioma: app_commands.Choice[str]):
+        from src.database import db as database_module
+        await database_module.set_guild_language(interaction.guild_id, idioma.value)
+        lang_name = "Español" if idioma.value == "es" else "English"
+        await interaction.response.send_message(
+            t("configserver_success", idioma.value, lang_name=lang_name), ephemeral=True
+        )
 
     @app_commands.command(name="language", description="Cambia el idioma del bot para ti / Change the bot's language for you.")
     @app_commands.choices(idioma=[
