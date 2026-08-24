@@ -222,10 +222,11 @@ class Settings(commands.Cog):
         app_commands.Choice(name="🇺🇸 English", value="en")
     ])
     async def configserver(self, interaction: discord.Interaction, idioma: app_commands.Choice[str]):
+        await interaction.response.defer(ephemeral=True)
         from src.database import db as database_module
         await database_module.set_guild_language(interaction.guild_id, idioma.value)
         lang_name = "Español" if idioma.value == "es" else "English"
-        await interaction.response.send_message(
+        await interaction.followup.send(
             t("configserver_success", idioma.value, lang_name=lang_name), ephemeral=True
         )
 
@@ -235,11 +236,9 @@ class Settings(commands.Cog):
         app_commands.Choice(name="🇺🇸 English", value="en")
     ])
     async def language_command(self, interaction: discord.Interaction, idioma: app_commands.Choice[str]):
+        await interaction.response.defer(ephemeral=True)
         await db.set_user_language(interaction.user.id, idioma.value)
-        if idioma.value == "es":
-            await interaction.response.send_message(f"✅ Idioma actualizado a **Español**.", ephemeral=True)
-        else:
-            await interaction.response.send_message(f"✅ Language updated to **English**.", ephemeral=True)
+        await interaction.followup.send(t("lang_updated", idioma.value), ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Settings(bot))
