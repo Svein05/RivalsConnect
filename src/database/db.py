@@ -59,9 +59,16 @@ async def init_db():
                 live_panel_channel_id INTEGER,
                 live_panel_msg_id INTEGER,
                 leaderboard_channel_id INTEGER,
-                leaderboard_msg_id INTEGER
+                leaderboard_msg_id INTEGER,
+                language TEXT DEFAULT 'es'
             )
         ''')
+        
+        # Migración automática: añadir columna language a guild_config si no existe
+        try:
+            await db.execute("ALTER TABLE guild_config ADD COLUMN language TEXT DEFAULT 'es'")
+        except:
+            pass
         
         await db.execute('''
             CREATE TABLE IF NOT EXISTS elo_thresholds (
@@ -71,22 +78,39 @@ async def init_db():
             )
         ''')
         
-        # Populate default ranks if empty
+        # Populate default ranks if empty (using neutral keys — Opción A)
         async with db.execute('SELECT COUNT(*) FROM elo_thresholds') as cursor:
             count = (await cursor.fetchone())[0]
             if count == 0:
                 ranks = [
-                    (0, "Bronce III"), (1, "Bronce II"), (2, "Bronce I"),
-                    (3, "Plata III"), (4, "Plata II"), (5, "Plata I"),
-                    (6, "Oro III"), (7, "Oro II"), (8, "Oro I"),
-                    (9, "Platino III"), (10, "Platino II"), (11, "Platino I"),
-                    (12, "Diamante III"), (13, "Diamante II"), (14, "Diamante I"),
-                    (15, "Gran Maestro III"), (16, "Gran Maestro II"), (17, "Gran Maestro I"),
-                    (18, "Celestial III"), (19, "Celestial II"), (20, "Celestial I"),
-                    (21, "Eternidad"), (22, "One Above All")
+                    (0, "bronze_3"), (1, "bronze_2"), (2, "bronze_1"),
+                    (3, "silver_3"), (4, "silver_2"), (5, "silver_1"),
+                    (6, "gold_3"), (7, "gold_2"), (8, "gold_1"),
+                    (9, "platinum_3"), (10, "platinum_2"), (11, "platinum_1"),
+                    (12, "diamond_3"), (13, "diamond_2"), (14, "diamond_1"),
+                    (15, "grand_master_3"), (16, "grand_master_2"), (17, "grand_master_1"),
+                    (18, "celestial_3"), (19, "celestial_2"), (20, "celestial_1"),
+                    (21, "eternity"), (22, "one_above_all")
                 ]
                 for r_id, r_name in ranks:
                     await db.execute('INSERT INTO elo_thresholds (rank_id, rank_name, min_elo) VALUES (?, ?, 99999)', (r_id, r_name))
+        
+        # Migración: actualizar nombres de rangos en español a claves neutras si la DB fue creada antes
+        ES_TO_KEY = {
+            "Bronce III": "bronze_3", "Bronce II": "bronze_2", "Bronce I": "bronze_1",
+            "Plata III": "silver_3", "Plata II": "silver_2", "Plata I": "silver_1",
+            "Oro III": "gold_3", "Oro II": "gold_2", "Oro I": "gold_1",
+            "Platino III": "platinum_3", "Platino II": "platinum_2", "Platino I": "platinum_1",
+            "Diamante III": "diamond_3", "Diamante II": "diamond_2", "Diamante I": "diamond_1",
+            "Gran Maestro III": "grand_master_3", "Gran Maestro II": "grand_master_2", "Gran Maestro I": "grand_master_1",
+            "Celestial III": "celestial_3", "Celestial II": "celestial_2", "Celestial I": "celestial_1",
+            "Eternidad": "eternity", "One Above All": "one_above_all"
+        }
+        async with db.execute('SELECT rank_name FROM elo_thresholds') as cursor:
+            existing = await cursor.fetchall()
+        for (name,) in existing:
+            if name in ES_TO_KEY:
+                await db.execute('UPDATE elo_thresholds SET rank_name = ? WHERE rank_name = ?', (ES_TO_KEY[name], name))
         
         await db.commit()
 
@@ -244,20 +268,63 @@ async def update_rank_threshold(rank_name: str, elo: int):
                 return new_min
         return None
 
-async def get_user_rank(elo: int):
-    if elo <= 0: return "Desclasificado"
+async def get_user_rank(elo: int) -> str:
+    """Returns the neutral rank key (e.g. 'grand_master_1') for the given ELO. Use translate_rank() to display it."""
+    if elo <= 0: return "unranked"
     
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute('SELECT rank_name, min_elo FROM elo_thresholds WHERE min_elo != 99999 ORDER BY rank_id DESC') as cursor:
             rows = await cursor.fetchall()
             
             if not rows:
-                return "Desclasificado"
+                return "unranked"
                 
             for r_name, r_min in rows:
                 if elo >= r_min:
                     return r_name
                     
-            # Si el ELO es menor que todos los rangos configurados,
-            # lo mantenemos en el rango más bajo configurado en lugar de desclasificarlo.
+            # If ELO is below all configured thresholds, keep at the lowest configured rank.
             return rows[-1][0]
+
+async def get_guild_language(guild_id: int) -> str:
+    """Returns the configured language for a guild (default 'es')."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute('SELECT language FROM guild_config WHERE guild_id = ?', (guild_id,)) as cursor:
+            row = await cursor.fetchone()
+            return row[0] if row and row[0] else 'es'
+
+async def set_guild_language(guild_id: int, language: str):
+    """Saves the language preference for a guild."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute('UPDATE guild_config SET language = ? WHERE guild_id = ?', (language, guild_id))
+        await db.commit()
+
+async def get_all_matches(discord_id: int):
+    """Returns all matches for a user as a list of dicts."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        async with db.execute(
+            'SELECT outcome, character_name FROM matches WHERE discord_id = ?',
+            (discord_id,)
+        ) as cursor:
+            rows = await cursor.fetchall()
+    return [{"outcome": r[0] or "", "character_name": r[1] or ""} for r in rows]
+
+async def get_top_roles(discord_id: int) -> dict:
+    """Aggregates win/total stats per role_key (vanguard/duelist/strategist) from match history."""
+    from src.utils.heroes import get_hero_data
+    matches = await get_all_matches(discord_id)
+    role_stats: dict = {}
+    for match in matches:
+        char_name = match["character_name"]
+        if not char_name or char_name == "???":
+            continue
+        outcome = match["outcome"].lower()
+        role_key = get_hero_data(char_name).get("role_key", "unknown")
+        if role_key == "unknown":
+            continue
+        if role_key not in role_stats:
+            role_stats[role_key] = {"wins": 0, "total": 0}
+        role_stats[role_key]["total"] += 1
+        if "victor" in outcome or "win" in outcome:
+            role_stats[role_key]["wins"] += 1
+    return role_stats

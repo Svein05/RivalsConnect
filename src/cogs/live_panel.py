@@ -2,12 +2,16 @@ import discord
 from discord.ext import commands
 import aiosqlite
 import logging
+from src.utils.i18n import t
 
 logger = logging.getLogger("live_panel")
 
 async def update_live_panel(bot, guild_id):
     """Actualiza el panel en vivo estático con el estado actual de los usuarios."""
     try:
+        from src.database import db as database_module
+        lang = await database_module.get_guild_language(guild_id)
+
         async with aiosqlite.connect("rivalsconnect.db") as db:
             # Recuperar configuración del guild
             async with db.execute('SELECT live_panel_channel_id, live_panel_msg_id FROM guild_config WHERE guild_id = ?', (guild_id,)) as cursor:
@@ -30,8 +34,8 @@ async def update_live_panel(bot, guild_id):
             return
             
         embed = discord.Embed(
-            title="📡 Panel de Información (Live)",
-            description="Estado actual de los agentes de la comunidad.",
+            title=t("panel_title", lang),
+            description=t("panel_desc", lang),
             color=discord.Color.dark_blue(),
             timestamp=discord.utils.utcnow()
         )
@@ -43,24 +47,24 @@ async def update_live_panel(bot, guild_id):
         for user in users:
             d_id, name, is_playing, context, status = user
             if status == "En Partida" or is_playing:
-                in_game.append(f"🟢 **{name}** : En Partida | {context if context else 'Sin detalles'}")
+                in_game.append(t("panel_status_playing", lang, name=name, context=context if context else "—"))
             elif status == "Lobby":
-                in_lobby.append(f"🟡 **{name}** : En Lobby (Buscando partida)")
+                in_lobby.append(t("panel_status_lobby", lang, name=name))
             else:
-                offline.append(f"🔴 **{name}** : Desconectado")
+                offline.append(t("panel_status_offline", lang, name=name))
                 
         if in_game:
-            embed.add_field(name="🎮 En Partida", value="\n".join(in_game), inline=False)
+            embed.add_field(name=t("panel_in_game_label", lang), value="\n".join(in_game), inline=False)
         else:
-            embed.add_field(name="🎮 En Partida", value="*Nadie está jugando en este momento.*", inline=False)
+            embed.add_field(name=t("panel_in_game_label", lang), value=t("panel_nobody", lang), inline=False)
             
         if in_lobby:
-            embed.add_field(name="☕ En Lobby", value="\n".join(in_lobby), inline=False)
+            embed.add_field(name=t("panel_lobby_label", lang), value="\n".join(in_lobby), inline=False)
             
         if offline:
-            embed.add_field(name="💤 Desconectados", value="\n".join(offline), inline=False)
+            embed.add_field(name=t("panel_offline_label", lang), value="\n".join(offline), inline=False)
             
-        embed.set_footer(text="RivalsConnect | Actualización automática")
+        embed.set_footer(text=t("panel_footer", lang))
         await msg.edit(embed=embed)
         
     except Exception as e:
@@ -70,3 +74,5 @@ async def setup(bot):
     # En este cog no hay comandos, solo lógica utilitaria,
     # pero el setup es necesario para que load_extension no falle.
     pass
+
+

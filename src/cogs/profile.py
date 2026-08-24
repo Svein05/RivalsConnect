@@ -2,10 +2,16 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 from src.database import db
-from src.utils.i18n import t
+from src.utils.i18n import t, translate_rank
 import logging
 
 logger = logging.getLogger("profile_cog")
+
+ROLE_FALLBACK = {
+    "vanguard": "🛡️",
+    "duelist": "⚔️",
+    "strategist": "💚",
+}
 
 class Profile(commands.Cog):
     def __init__(self, bot):
@@ -22,7 +28,7 @@ class Profile(commands.Cog):
             
             if not user_data:
                 await interaction.response.send_message(
-                    f"❌ **{target.display_name}** aún no ha vinculado su cuenta o no ha registrado ninguna partida en la base de datos.", 
+                    t("profile_no_account", lang, name=target.display_name),
                     ephemeral=True
                 )
                 return
@@ -38,18 +44,19 @@ class Profile(commands.Cog):
             in_game_uid = user_data[7]
             
             # Crear Embed
-            rank_name = await db.get_user_rank(elo_score)
+            rank_key = await db.get_user_rank(elo_score)
+            rank_name = translate_rank(rank_key, lang)
             embed = discord.Embed(
-                title=f"Perfil de Jugador: {target.display_name}",
+                title=t("profile_title", lang, name=target.display_name),
                 color=discord.Color.blurple(),
                 timestamp=discord.utils.utcnow()
             )
             if target.avatar:
                 embed.set_thumbnail(url=target.avatar.url)
                 
-            embed.add_field(name="Rango Competitivo", value=f"**{rank_name}** ({elo_score} ELO)", inline=False)
+            embed.add_field(name=t("profile_comp_rank", lang), value=f"**{rank_name}** ({elo_score} ELO)", inline=False)
             if in_game_uid:
-                embed.add_field(name="ID de Rivals", value=f"`{in_game_uid}`", inline=False)
+                embed.add_field(name=t("profile_rivals_id", lang), value=f"`{in_game_uid}`", inline=False)
                 
             # Cargar los Lords del usuario
             user_lords = await db.get_user_lords(target.id)
@@ -92,36 +99,50 @@ class Profile(commands.Cog):
                     winrate = int((wins / total_games) * 100) if total_games > 0 else 0
                     top_text.append(t("profile_top_format", lang, emoji=emoji, char=char_name, wr=winrate, games=total_games))
                 
-                embed.add_field(name="Top Personajes", value="\n".join(top_text), inline=False)
+                embed.add_field(name=t("profile_top_section", lang), value="\n".join(top_text), inline=False)
+
+            # --- Stats por Rol ---
+            role_stats = await db.get_top_roles(target.id)
+            role_order = ["vanguard", "duelist", "strategist"]
+            role_lines = []
+            for role_key_r in role_order:
+                data = role_stats.get(role_key_r)
+                if data and data["total"] > 0:
+                    wr = int((data["wins"] / data["total"]) * 100)
+                    emoji_name = f"{role_key_r}_icon"
+                    emoji = APP_EMOJIS.get(emoji_name, ROLE_FALLBACK.get(role_key_r, "❓"))
+                    label = t(f"role_{role_key_r}", lang)
+                    role_lines.append(t("profile_role_format", lang, emoji=emoji, role=label, wr=wr, games=data["total"]))
+            if role_lines:
+                embed.add_field(name=t("profile_role_stats", lang), value="\n".join(role_lines), inline=False)
                 
-            # Cargar úÚltimas 5 partidas
+            # Cargar últimas 5 partidas
             recent_matches = await db.get_recent_matches(target.id, limit=5)
             if recent_matches:
                 history_text = []
                 for idx, match in enumerate(recent_matches, 1):
                     # match: elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, match_date
-                    m_elo = match[0]
                     m_k = match[1]
                     m_d = match[2]
                     m_a = match[3]
-                    m_outcome = match[6] or "Desconocido"
+                    m_outcome = match[6] or ""
                     m_char = match[7] or "???"
-                    m_mode = match[8] or "Desconocido"
-                    m_map = match[9] or "Desconocido"
+                    m_mode = match[8] or t("unknown", lang)
+                    m_map = match[9] or t("unknown", lang)
                     
                     if "victor" in m_outcome.lower() or "win" in m_outcome.lower():
-                        prefix = "🔹 VICTORIA"
+                        prefix = t("victory_short", lang)
                     elif "defeat" in m_outcome.lower() or "loss" in m_outcome.lower() or "derrot" in m_outcome.lower():
-                        prefix = "🔸 DERROTA"
+                        prefix = t("defeat_short", lang)
                     else:
-                        prefix = "⬜ TERMINADA"
+                        prefix = t("finished_short", lang)
                         
                     emoji = get_hero_emoji(m_char, str(target.id), fake_lords_dict, True)
                     
                     line = f"{prefix} | {emoji} `{m_k}/{m_d}/{m_a}` | {m_mode} | {m_map}"
                     history_text.append(line)
                     
-                embed.add_field(name="Historial Reciente (Últimas 5)", value="\n".join(history_text), inline=False)
+                embed.add_field(name=t("profile_recent_section", lang, num=len(recent_matches)), value="\n".join(history_text), inline=False)
             else:
                 embed.add_field(name=t("profile_recent_title", lang), value=t("profile_recent_empty", lang), inline=False)
                 
@@ -134,3 +155,5 @@ class Profile(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(Profile(bot))
+
+
