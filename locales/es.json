@@ -149,5 +149,8 @@
     "rank_celestial_2": "Celestial II",
     "rank_celestial_1": "Celestial I",
     "rank_eternity": "Eternidad",
-    "rank_one_above_all": "One Above All"
+    "rank_one_above_all": "One Above All",
+    "mode_convergence": "Convergencia",
+    "mode_domination": "Dominación",
+    "mode_convoy": "Convoy"
 }

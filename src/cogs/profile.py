@@ -103,7 +103,7 @@ class Profile(commands.Cog):
 
             # --- Stats por Rol ---
             role_stats = await db.get_top_roles(target.id)
-            role_order = ["vanguard", "duelist", "strategist"]
+            role_order = sorted(["vanguard", "duelist", "strategist"], key=lambda r: role_stats.get(r, {}).get("total", 0), reverse=True)
             role_lines = []
             for role_key_r in role_order:
                 data = role_stats.get(role_key_r)
@@ -127,7 +127,12 @@ class Profile(commands.Cog):
                     m_a = match[3]
                     m_outcome = match[6] or ""
                     m_char = match[7] or "???"
-                    m_mode = match[8] or t("unknown", lang)
+                    
+                    m_mode_raw = match[8] or "unknown"
+                    m_mode = t(f"mode_{m_mode_raw.lower()}", lang)
+                    if m_mode.startswith("[mode_"): 
+                        m_mode = m_mode_raw.capitalize()
+                        
                     m_map = match[9] or t("unknown", lang)
                     
                     if "victor" in m_outcome.lower() or "win" in m_outcome.lower():
