@@ -302,8 +302,9 @@ class ProfileView(discord.ui.View):
         fake_lords_dict = {str(self.target.id): {char.upper(): title for char, title in user_lords}} if user_lords else {}
         
         if heroes_list:
-            table_lines = []
-            for h in heroes_list[:12]:
+            field_lines = []
+            curr_len = 0
+            for h in heroes_list:
                 emoji = get_hero_emoji(h["name"], str(self.target.id), fake_lords_dict, True)
                 name = h["name"]
                 m = h["matches"]
@@ -316,9 +317,13 @@ class ProfileView(discord.ui.View):
                 if heal > 0:
                     extra += f" 💚{heal}/m"
                     
-                table_lines.append(f"{emoji} **{name}**: `{m}P` | **{wr}%** WR | `{kda} KDA`{extra}")
+                line = f"{emoji} **{name}**: `{m}P` | **{wr}%** WR | `{kda} KDA`{extra}"
+                if curr_len + len(line) + 1 > 980 or len(field_lines) >= 8:
+                    break
+                field_lines.append(line)
+                curr_len += len(line) + 1
                 
-            embed.add_field(name=f"Top Héroes ({len(heroes_list)} registrados)", value="\n".join(table_lines), inline=False)
+            embed.add_field(name=f"Top Héroes ({len(heroes_list)} registrados)", value="\n".join(field_lines), inline=False)
         else:
             embed.add_field(name="Héroes", value=t("profile_no_heroes", self.lang), inline=False)
             

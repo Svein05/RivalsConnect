@@ -36,6 +36,8 @@ GAME_MODE_MAP = {
 
 SCHEMA_VERSION = 2
 
+BOOT_TIME = int(time.time())
+
 async def init_rivalsmeta_cache():
     """Crea la tabla de caché de RivalsMeta si no existe y purga cachés obsoletas."""
     async with aiosqlite.connect(DB_PATH) as db:
@@ -54,7 +56,7 @@ async def init_rivalsmeta_cache():
         await db.commit()
 
 async def get_cached_player(uid: str) -> Optional[Dict[str, Any]]:
-    """Recupera los datos del jugador de la caché local si no han expirado y cumplen la versión."""
+    """Recupera los datos del jugador si no han expirado, cumplen la versión y se crearon tras este reinicio."""
     now = int(time.time())
     try:
         async with aiosqlite.connect(DB_PATH) as db:
@@ -65,6 +67,10 @@ async def get_cached_player(uid: str) -> Optional[Dict[str, Any]]:
                 row = await cursor.fetchone()
                 if row:
                     json_data, cached_at = row
+                    # Si la caché se generó antes del reinicio actual del bot, forzar sincronización fresca
+                    if cached_at < BOOT_TIME:
+                        return None
+                        
                     if now - cached_at < CACHE_TTL_SECONDS:
                         data = json.loads(json_data)
                         if data.get("schema_version") == SCHEMA_VERSION and "heroes_ranked" in data and data.get("rank_history_points"):
