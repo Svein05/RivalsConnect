@@ -171,5 +171,18 @@
     "char_teamups_title": "Sinergias (Team-Ups) — {name}",
     "char_no_teamups": "*Este personaje no cuenta con sinergias activas.*",
     "char_error": "❌ Ocurrió un error al buscar la información del personaje.",
-    "cmd_character": "Muestra información, habilidades y sinergias de un héroe."
+    "cmd_character": "Muestra información, habilidades y sinergias de un héroe.",
+    "char_btn_balance": "⚖️ Balance",
+    "char_select_all_abilities": "📜 Ver todas las habilidades",
+    "char_select_ability_placeholder": "Selecciona una habilidad para ver su icono y detalles...",
+    "char_select_all_teamups": "📜 Ver todas las sinergias",
+    "char_select_teamup_placeholder": "Selecciona una sinergia para ver detalles...",
+    "char_abilities_summary_desc": "Usa el menú desplegable para ver los detalles e icono oficial de cada habilidad.",
+    "char_teamups_summary_desc": "Usa el menú desplegable para ver los detalles e icono oficial de cada sinergia.",
+    "char_ability_key_label": "Tecla Asignada",
+    "char_teamup_partner_label": "Compañero de Equipo",
+    "char_balance_title": "Historial de Balance — {name}",
+    "char_balance_desc": "Ajustes, buffs y nerfs aplicados a este personaje a lo largo de las temporadas.",
+    "char_no_balance": "*No se encontraron registros de cambios de balance para este personaje.*",
+    "char_no_desc": "*Sin descripción disponible.*"
 }
