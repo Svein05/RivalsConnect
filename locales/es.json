@@ -190,5 +190,22 @@
     "profile_global_kda": "⚔️ KDA Global",
     "profile_global_wr": "🏆 Winrate Global",
     "profile_global_matches": "🎮 Partidas Ranked",
-    "profile_synced_rivalsmeta": "🔹 Calibrado con RivalsMeta"
+    "profile_synced_rivalsmeta": "🔹 Calibrado con RivalsMeta",
+    "profile_top_comp": "🏆 Top Competitivo",
+    "profile_top_casual": "🎮 Top Casual",
+    "profile_no_heroes": "*Sin partidas registradas*",
+    "profile_page_overview": "Resumen",
+    "profile_page_heroes": "Héroes",
+    "profile_page_ranked": "Competitivo & Gráfico",
+    "profile_page_maps": "Mapas",
+    "profile_mode_competitive": "Competitivo",
+    "profile_mode_quickplay": "Quick Play",
+    "profile_select_mode_placeholder": "Selecciona el modo de juego...",
+    "profile_roles_overview": "Desglose por Roles",
+    "profile_rank_progression_title": "Progresión de Rango — {name}",
+    "profile_rank_peak": "Pico Más Alto",
+    "profile_rank_total_games": "Partidas Totales",
+    "profile_rank_winrate": "Win Rate",
+    "profile_maps_title": "Estadísticas de Mapas — {name}",
+    "profile_no_maps": "*No hay datos de mapas registrados.*"
 }

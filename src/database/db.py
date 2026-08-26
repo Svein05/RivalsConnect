@@ -206,7 +206,7 @@ async def add_match(discord_id: int, elo_change: int, kills: int, deaths: int, a
         ''', (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, roster_json))
         await db.commit()
 
-async def get_recent_matches(discord_id: int, limit: int = 5):
+async def get_recent_matches(discord_id: int, limit: int = 10):
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute('''
             SELECT elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, match_date, roster_json
@@ -216,6 +216,48 @@ async def get_recent_matches(discord_id: int, limit: int = 5):
             LIMIT ?
         ''', (discord_id, limit)) as cursor:
             return await cursor.fetchall()
+
+def format_relative_time(date_val, lang: str = "es") -> str:
+    """Calcula y formatea el tiempo transcurrido desde la partida a texto legible."""
+    from datetime import datetime, timezone
+    if not date_val:
+        return "Hace poco" if lang == "es" else "Just now"
+        
+    now = datetime.now(timezone.utc)
+    match_dt = None
+    
+    if isinstance(date_val, (int, float)):
+        match_dt = datetime.fromtimestamp(date_val, tz=timezone.utc)
+    elif isinstance(date_val, str):
+        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+            try:
+                match_dt = datetime.strptime(date_val, fmt).replace(tzinfo=timezone.utc)
+                break
+            except ValueError:
+                pass
+                
+    if not match_dt:
+        return str(date_val)
+        
+    diff = (now - match_dt).total_seconds()
+    if diff < 0:
+        diff = 0
+        
+    if diff < 3600:
+        mins = max(1, int(diff / 60))
+        return f"Hace {mins} minutos" if lang == "es" else f"{mins} mins ago"
+    elif diff < 86400:
+        hours = max(1, int(diff / 3600))
+        unit = "hora" if hours == 1 else "horas"
+        return f"Hace {hours} {unit}" if lang == "es" else f"{hours} hours ago"
+    elif diff < 2592000:
+        days = max(1, int(diff / 86400))
+        unit = "dia" if days == 1 else "dias"
+        return f"Hace {days} {unit}" if lang == "es" else f"{days} days ago"
+    else:
+        months = max(1, int(diff / 2592000))
+        unit = "mes" if months == 1 else "meses"
+        return f"Hace {months} {unit}" if lang == "es" else f"{months} months ago"
 
 async def update_user_lords(discord_id: int, heroes: list, title_type: str):
     async with aiosqlite.connect(DB_PATH) as db:
@@ -235,18 +277,28 @@ async def update_user_lords(discord_id: int, heroes: list, title_type: str):
             ''', (discord_id, hero, title_type))
         await db.commit()
 
-async def get_top_characters(discord_id: int, limit: int = 3):
+async def get_top_characters(discord_id: int, mode_type: str = None, limit: int = 5):
     async with aiosqlite.connect(DB_PATH) as db:
-        async with db.execute('''
+        query = '''
             SELECT character_name, 
                    COUNT(*) as total_games, 
-                   SUM(CASE WHEN LOWER(outcome) LIKE '%victor%' OR LOWER(outcome) LIKE '%win%' THEN 1 ELSE 0 END) as wins 
+                   SUM(CASE WHEN LOWER(outcome) LIKE '%victor%' OR LOWER(outcome) LIKE '%win%' THEN 1 ELSE 0 END) as wins,
+                   ROUND(AVG(kills), 1) as avg_k,
+                   ROUND(AVG(deaths), 1) as avg_d,
+                   ROUND(AVG(assists), 1) as avg_a
             FROM matches 
-            WHERE discord_id = ? AND character_name IS NOT NULL AND character_name != '???' 
-            GROUP BY character_name 
-            ORDER BY total_games DESC, wins DESC
-            LIMIT ?
-        ''', (discord_id, limit)) as cursor:
+            WHERE discord_id = ? AND character_name IS NOT NULL AND character_name != '???'
+        '''
+        params = [discord_id]
+        if mode_type == "ranked":
+            query += " AND (LOWER(mode) LIKE '%comp%' OR LOWER(mode) LIKE '%rank%')"
+        elif mode_type == "unranked":
+            query += " AND (LOWER(mode) NOT LIKE '%comp%' AND LOWER(mode) NOT LIKE '%rank%')"
+            
+        query += " GROUP BY character_name ORDER BY total_games DESC, wins DESC LIMIT ?"
+        params.append(limit)
+        
+        async with db.execute(query, tuple(params)) as cursor:
             return await cursor.fetchall()
 
 async def get_user_language(discord_id: int) -> str:
