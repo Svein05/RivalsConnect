@@ -190,5 +190,22 @@
     "profile_global_kda": "⚔️ Global KDA",
     "profile_global_wr": "🏆 Global Winrate",
     "profile_global_matches": "🎮 Ranked Matches",
-    "profile_synced_rivalsmeta": "🔹 Calibrated with RivalsMeta"
+    "profile_synced_rivalsmeta": "🔹 Calibrated with RivalsMeta",
+    "profile_top_comp": "🏆 Top Competitive",
+    "profile_top_casual": "🎮 Top Casual",
+    "profile_no_heroes": "*No matches recorded*",
+    "profile_page_overview": "Overview",
+    "profile_page_heroes": "Heroes",
+    "profile_page_ranked": "Competitive & Graph",
+    "profile_page_maps": "Maps",
+    "profile_mode_competitive": "Competitive",
+    "profile_mode_quickplay": "Quick Play",
+    "profile_select_mode_placeholder": "Select game mode...",
+    "profile_roles_overview": "Role Breakdown",
+    "profile_rank_progression_title": "Rank Progression — {name}",
+    "profile_rank_peak": "Peak RS",
+    "profile_rank_total_games": "Total Games",
+    "profile_rank_winrate": "Win Rate",
+    "profile_maps_title": "Map Statistics — {name}",
+    "profile_no_maps": "*No map data recorded.*"
 }
