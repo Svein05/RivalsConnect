@@ -185,8 +185,9 @@ async def handle_overwolf_events(request):
                     outcome = data.get("outcome", "Desconocido")
                     mode = data.get("mode", "Desconocido")
                     map_name = data.get("map", "Desconocido")
+                    roster_json = json.dumps(roster) if roster else None
                     
-                    await db.add_match(discord_id, elo_change, local_k, local_d, local_a, damage, heal, outcome, local_hero, mode, map_name)
+                    await db.add_match(discord_id, elo_change, local_k, local_d, local_a, damage, heal, outcome, local_hero, mode, map_name, roster_json)
                 
                 # Obtener diccionario de Lords global
                 lords_dict = await db.get_all_lords_by_uid()
@@ -261,6 +262,12 @@ async def handle_user_stats(request):
         
         matches_formatted = []
         for m in recent_matches:
+            roster_data = {}
+            if len(m) > 11 and m[11]:
+                try:
+                    roster_data = json.loads(m[11])
+                except Exception:
+                    roster_data = {}
             matches_formatted.append({
                 "elo_change": m[0],
                 "kills": m[1],
@@ -272,7 +279,8 @@ async def handle_user_stats(request):
                 "character_name": m[7],
                 "mode": m[8],
                 "map_name": m[9],
-                "match_date": m[10]
+                "match_date": m[10],
+                "roster": roster_data
             })
             
         return web.json_response({
@@ -309,6 +317,12 @@ async def handle_history(request):
         
         matches_formatted = []
         for m in recent_matches:
+            roster_data = {}
+            if len(m) > 11 and m[11]:
+                try:
+                    roster_data = json.loads(m[11])
+                except Exception:
+                    roster_data = {}
             matches_formatted.append({
                 "elo_change": m[0],
                 "kills": m[1],
@@ -320,7 +334,8 @@ async def handle_history(request):
                 "character_name": m[7],
                 "mode": m[8],
                 "map_name": m[9],
-                "match_date": m[10]
+                "match_date": m[10],
+                "roster": roster_data
             })
             
         return web.json_response({"success": True, "matches": matches_formatted}, headers=headers)
