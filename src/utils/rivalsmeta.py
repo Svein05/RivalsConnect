@@ -34,8 +34,10 @@ GAME_MODE_MAP = {
     3: "Domination"
 }
 
+SCHEMA_VERSION = 2
+
 async def init_rivalsmeta_cache():
-    """Crea la tabla de caché de RivalsMeta si no existe."""
+    """Crea la tabla de caché de RivalsMeta si no existe y purga cachés obsoletas."""
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute('''
             CREATE TABLE IF NOT EXISTS rivalsmeta_cache (
@@ -44,10 +46,15 @@ async def init_rivalsmeta_cache():
                 cached_at INTEGER
             )
         ''')
+        # Purgar cualquier caché que no tenga la versión de esquema actual
+        try:
+            await db.execute('DELETE FROM rivalsmeta_cache WHERE json_data NOT LIKE ?', (f'%"schema_version": {SCHEMA_VERSION}%',))
+        except Exception:
+            pass
         await db.commit()
 
 async def get_cached_player(uid: str) -> Optional[Dict[str, Any]]:
-    """Recupera los datos del jugador de la caché local si no han expirado."""
+    """Recupera los datos del jugador de la caché local si no han expirado y cumplen la versión."""
     now = int(time.time())
     try:
         async with aiosqlite.connect(DB_PATH) as db:
@@ -60,8 +67,9 @@ async def get_cached_player(uid: str) -> Optional[Dict[str, Any]]:
                     json_data, cached_at = row
                     if now - cached_at < CACHE_TTL_SECONDS:
                         data = json.loads(json_data)
-                        data["cached"] = True
-                        return data
+                        if data.get("schema_version") == SCHEMA_VERSION and "heroes_ranked" in data and data.get("rank_history_points"):
+                            data["cached"] = True
+                            return data
     except Exception as e:
         logger.warning(f"Error leyendo rivalsmeta_cache para UID {uid}: {e}")
     return None
@@ -287,8 +295,10 @@ def parse_rivalsmeta_payload(raw_json: Dict[str, Any], uid: str) -> Dict[str, An
         "role_wr_ranked": role_wr_ranked,
         "role_wr_unranked": role_wr_unranked,
         "rank_history_points": rank_history_points,
+        "match_history": match_history,
         "maps_data": maps_data,
         "web_url": f"https://rivalsmeta.com/player/{uid}",
+        "schema_version": SCHEMA_VERSION,
         "cached": False
     }
 

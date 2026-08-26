@@ -161,6 +161,11 @@ async def handle_overwolf_events(request):
                     has_bans = bool(data.get("bans"))
                     is_competitive = (game_type.lower() == "competitive") or has_bans
 
+                    if local_uid:
+                        async with aiosqlite.connect(db.DB_PATH) as _db:
+                            await _db.execute('UPDATE users SET in_game_uid = ? WHERE discord_id = ? AND (in_game_uid IS NULL OR in_game_uid = "")', (local_uid, discord_id))
+                            await _db.commit()
+
                     if current_elo > 0 and is_competitive:
                         old_elo = await db.update_user_elo(discord_id, current_elo, local_uid)
                         if old_elo > 0:

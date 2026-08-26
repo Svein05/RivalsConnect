@@ -48,9 +48,19 @@ async def init_db():
                 character_name TEXT,
                 mode TEXT,
                 map_name TEXT,
-                match_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                match_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                match_uid TEXT UNIQUE
             )
         ''')
+        
+        try:
+            await db.execute("ALTER TABLE matches ADD COLUMN match_uid TEXT")
+        except:
+            pass
+        try:
+            await db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_matches_uid ON matches(match_uid) WHERE match_uid IS NOT NULL")
+        except:
+            pass
         
         await db.execute('''
             CREATE TABLE IF NOT EXISTS guild_config (
@@ -204,6 +214,60 @@ async def add_match(discord_id: int, elo_change: int, kills: int, deaths: int, a
             INSERT INTO matches (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, roster_json)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, roster_json))
+        await db.commit()
+
+async def sync_rivalsmeta_matches(discord_id: int, match_history: list):
+    """Inserta las partidas del historial de RivalsMeta en la tabla matches si no existen previamente."""
+    if not match_history:
+        return
+        
+    from datetime import datetime, timezone
+    from src.utils.heroes import get_hero_by_id
+    from src.utils.rivalsmeta import MAP_ID_MAP, GAME_MODE_MAP
+    
+    async with aiosqlite.connect(DB_PATH) as db:
+        for m in match_history:
+            m_uid = str(m.get("match_uid", "")).strip()
+            if not m_uid:
+                continue
+                
+            # Comprobar si ya existe
+            async with db.execute("SELECT id FROM matches WHERE match_uid = ?", (m_uid,)) as cursor:
+                if await cursor.fetchone():
+                    continue
+                    
+            mp = m.get("match_player", {})
+            df = mp.get("dynamic_fields", {})
+            p_hero = mp.get("player_hero", {})
+            hero_id = p_hero.get("hero_id") if isinstance(p_hero, dict) else p_hero
+            hero_info = get_hero_by_id(hero_id)
+            hero_name = hero_info.get("display_name", f"Hero {hero_id}")
+            
+            is_win = bool(mp.get("is_win", 0))
+            outcome = "VICTORIA" if is_win else "DERROTA"
+            
+            add_score = 0
+            if isinstance(df, dict) and df.get("add_score") is not None:
+                add_score = int(round(float(df.get("add_score", 0))))
+                
+            k = int(mp.get("k", 0))
+            d = int(mp.get("d", 0))
+            a = int(mp.get("a", 0))
+            
+            mode_id = m.get("game_mode_id", 2)
+            mode_name = GAME_MODE_MAP.get(mode_id, "Competitive")
+            
+            map_id = m.get("match_map_id", 0)
+            map_name = MAP_ID_MAP.get(map_id, "Marvel Rivals Map")
+            
+            ts = m.get("match_time_stamp", 0)
+            dt_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S") if ts else None
+            
+            await db.execute('''
+                INSERT INTO matches (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, match_date, match_uid)
+                VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?)
+            ''', (discord_id, add_score, k, d, a, outcome, hero_name, mode_name, map_name, dt_str, m_uid))
+            
         await db.commit()
 
 async def get_recent_matches(discord_id: int, limit: int = 10):
