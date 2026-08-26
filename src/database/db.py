@@ -217,7 +217,7 @@ async def add_match(discord_id: int, elo_change: int, kills: int, deaths: int, a
         await db.commit()
 
 async def sync_rivalsmeta_matches(discord_id: int, match_history: list):
-    """Inserta las partidas del historial de RivalsMeta en la tabla matches si no existen previamente."""
+    """Inserta las partidas del historial de RivalsMeta en la tabla matches si no existen previamente y reconcilia duplicados."""
     if not match_history:
         return
         
@@ -231,11 +231,6 @@ async def sync_rivalsmeta_matches(discord_id: int, match_history: list):
             if not m_uid:
                 continue
                 
-            # Comprobar si ya existe
-            async with db.execute("SELECT id FROM matches WHERE match_uid = ?", (m_uid,)) as cursor:
-                if await cursor.fetchone():
-                    continue
-                    
             mp = m.get("match_player", {})
             df = mp.get("dynamic_fields", {})
             p_hero = mp.get("player_hero", {})
@@ -263,11 +258,55 @@ async def sync_rivalsmeta_matches(discord_id: int, match_history: list):
             ts = m.get("match_time_stamp", 0)
             dt_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S") if ts else None
             
+            # 1. Comprobar si ya existe con este match_uid exacto
+            async with db.execute("SELECT id FROM matches WHERE match_uid = ?", (m_uid,)) as cursor:
+                if await cursor.fetchone():
+                    continue
+                    
+            # 2. Si hay una partida local sin match_uid con las mismas stats (kills, deaths, assists), actualizarla con la data oficial
+            async with db.execute('''
+                SELECT id FROM matches 
+                WHERE discord_id = ? AND match_uid IS NULL AND kills = ? AND deaths = ? AND assists = ?
+                LIMIT 1
+            ''', (discord_id, k, d, a)) as cursor:
+                local_match = await cursor.fetchone()
+                if local_match:
+                    local_id = local_match[0]
+                    await db.execute('''
+                        UPDATE matches SET
+                            match_uid = ?,
+                            elo_change = ?,
+                            kills = ?,
+                            deaths = ?,
+                            assists = ?,
+                            outcome = ?,
+                            character_name = ?,
+                            mode = ?,
+                            map_name = ?,
+                            match_date = ?
+                        WHERE id = ?
+                    ''', (m_uid, add_score, k, d, a, outcome, hero_name, mode_name, map_name, dt_str, local_id))
+                    continue
+                    
+            # 3. Si no existe, insertar nueva fila oficial
             await db.execute('''
                 INSERT INTO matches (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, match_date, match_uid)
                 VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?)
             ''', (discord_id, add_score, k, d, a, outcome, hero_name, mode_name, map_name, dt_str, m_uid))
             
+        # 4. Eliminar cualquier duplicado residual sin match_uid que tenga los mismos K/D/A de una partida con match_uid
+        await db.execute('''
+            DELETE FROM matches 
+            WHERE discord_id = ? AND match_uid IS NULL 
+            AND EXISTS (
+                SELECT 1 FROM matches m2 
+                WHERE m2.discord_id = matches.discord_id 
+                  AND m2.match_uid IS NOT NULL 
+                  AND m2.kills = matches.kills 
+                  AND m2.deaths = matches.deaths 
+                  AND m2.assists = matches.assists
+            )
+        ''', (discord_id,))
         await db.commit()
 
 async def get_recent_matches(discord_id: int, limit: int = 10):
