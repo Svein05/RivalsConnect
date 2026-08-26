@@ -184,5 +184,11 @@
     "char_balance_title": "Balance Changes — {name}",
     "char_balance_desc": "Adjustments, buffs, and nerfs applied to this character across seasons.",
     "char_no_balance": "*No balance changes recorded for this character.*",
-    "char_no_desc": "*No description available.*"
+    "char_no_desc": "*No description available.*",
+    "btn_view_rivalsmeta": "🌐 View on RivalsMeta",
+    "profile_global_section": "Global Stats (Season {season})",
+    "profile_global_kda": "⚔️ Global KDA",
+    "profile_global_wr": "🏆 Global Winrate",
+    "profile_global_matches": "🎮 Ranked Matches",
+    "profile_synced_rivalsmeta": "🔹 Calibrated with RivalsMeta"
 }
