@@ -232,6 +232,101 @@ async def handle_overwolf_events(request):
         logger.error(f"Error en el servidor web: {e}")
         return web.Response(text="Bad Request", status=400, headers=headers)
 
+async def handle_user_stats(request):
+    """Endpoint para que Overwolf consulte el perfil completo y estadísticas del usuario."""
+    headers = {"Access-Control-Allow-Origin": "*"}
+    try:
+        data = await request.json()
+        link_code = data.get("link_code")
+        if not link_code:
+            return web.json_response({"success": False, "error": "Missing link_code"}, headers=headers, status=400)
+            
+        user = await db.get_user_by_code(link_code)
+        if not user:
+            return web.json_response({"success": False, "error": "User not found"}, headers=headers, status=404)
+            
+        discord_id = user[0]
+        user_data = await db.get_user(discord_id)
+        if not user_data:
+            return web.json_response({"success": False, "error": "User data not found"}, headers=headers, status=404)
+            
+        elo_score = user_data[6] or 0
+        in_game_uid = user_data[7]
+        rank_key = await db.get_user_rank(elo_score)
+        user_lords = await db.get_user_lords(discord_id)
+        top_chars = await db.get_top_characters(discord_id, limit=5)
+        role_stats = await db.get_top_roles(discord_id)
+        recent_matches = await db.get_recent_matches(discord_id, limit=10)
+        
+        matches_formatted = []
+        for m in recent_matches:
+            matches_formatted.append({
+                "elo_change": m[0],
+                "kills": m[1],
+                "deaths": m[2],
+                "assists": m[3],
+                "damage": m[4],
+                "heal": m[5],
+                "outcome": m[6],
+                "character_name": m[7],
+                "mode": m[8],
+                "map_name": m[9],
+                "match_date": m[10]
+            })
+            
+        return web.json_response({
+            "success": True,
+            "discord_id": discord_id,
+            "discord_name": user_data[1],
+            "discord_avatar": user_data[2],
+            "elo_score": elo_score,
+            "rank_key": rank_key,
+            "in_game_uid": in_game_uid,
+            "lords": user_lords,
+            "top_characters": top_chars,
+            "role_stats": role_stats,
+            "recent_matches": matches_formatted
+        }, headers=headers)
+    except Exception as e:
+        logger.error(f"Error en /api/user-stats: {e}")
+        return web.json_response({"success": False, "error": str(e)}, headers=headers, status=500)
+
+async def handle_history(request):
+    """Endpoint para que Overwolf consulte el historial de partidas almacenado en la nube."""
+    headers = {"Access-Control-Allow-Origin": "*"}
+    try:
+        data = await request.json()
+        link_code = data.get("link_code")
+        limit = data.get("limit", 20)
+        
+        user = await db.get_user_by_code(link_code)
+        if not user:
+            return web.json_response({"success": False, "error": "Invalid link_code"}, headers=headers, status=401)
+            
+        discord_id = user[0]
+        recent_matches = await db.get_recent_matches(discord_id, limit=limit)
+        
+        matches_formatted = []
+        for m in recent_matches:
+            matches_formatted.append({
+                "elo_change": m[0],
+                "kills": m[1],
+                "deaths": m[2],
+                "assists": m[3],
+                "damage": m[4],
+                "heal": m[5],
+                "outcome": m[6],
+                "character_name": m[7],
+                "mode": m[8],
+                "map_name": m[9],
+                "match_date": m[10]
+            })
+            
+        return web.json_response({"success": True, "matches": matches_formatted}, headers=headers)
+    except Exception as e:
+        logger.error(f"Error en /api/history: {e}")
+        return web.json_response({"success": False, "error": str(e)}, headers=headers, status=500)
+
 async def start_web_server(bot, port: int):
     """Inicia el servidor HTTP de aiohttp."""
     app = web.Application()
@@ -243,8 +338,15 @@ async def start_web_server(bot, port: int):
     app.router.add_options('/api/overwolf-events', handle_options)
     app.router.add_post('/api/overwolf-events', handle_overwolf_events)
     
+    app.router.add_options('/api/user-stats', handle_options)
+    app.router.add_post('/api/user-stats', handle_user_stats)
+    
+    app.router.add_options('/api/history', handle_options)
+    app.router.add_post('/api/history', handle_history)
+    
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, 'localhost', port)
     await site.start()
     print(f"🌍 Servidor web local para Overwolf escuchando en http://localhost:{port}/api/overwolf-events")
+
