@@ -184,5 +184,11 @@
     "char_balance_title": "Historial de Balance — {name}",
     "char_balance_desc": "Ajustes, buffs y nerfs aplicados a este personaje a lo largo de las temporadas.",
     "char_no_balance": "*No se encontraron registros de cambios de balance para este personaje.*",
-    "char_no_desc": "*Sin descripción disponible.*"
+    "char_no_desc": "*Sin descripción disponible.*",
+    "btn_view_rivalsmeta": "🌐 Ver en RivalsMeta",
+    "profile_global_section": "Estadísticas Globales (Temporada {season})",
+    "profile_global_kda": "⚔️ KDA Global",
+    "profile_global_wr": "🏆 Winrate Global",
+    "profile_global_matches": "🎮 Partidas Ranked",
+    "profile_synced_rivalsmeta": "🔹 Calibrado con RivalsMeta"
 }
