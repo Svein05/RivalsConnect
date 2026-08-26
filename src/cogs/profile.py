@@ -189,26 +189,26 @@ class ProfileView(discord.ui.View):
         if self.meta_data and self.meta_data.get("heroes_ranked"):
             for h in self.meta_data["heroes_ranked"][:5]:
                 emoji = get_hero_emoji(h["name"], str(self.target.id), fake_lords_dict, True)
-                comp_heroes_lines.append(f"{emoji} **{h['name']}** | {h['wr']}% WR\n└ `{h['kda']} KDA` ({h['matches']}P)")
+                name_upper = h["name"].upper()
+                comp_heroes_lines.append(f"{emoji} **{name_upper}** | {h['wr']}% WR ({h['matches']}P)")
         else:
             local_comp = await db.get_top_characters(self.target.id, mode_type="ranked", limit=5)
             for cname, tgames, wins, ak, ad, aa in local_comp:
                 emoji = get_hero_emoji(cname, str(self.target.id), fake_lords_dict, True)
                 wr = int((wins / tgames) * 100) if tgames > 0 else 0
-                kda = round((ak + aa) / max(1, ad), 2)
-                comp_heroes_lines.append(f"{emoji} **{cname}** | {wr}% WR\n└ `{kda} KDA` ({tgames}P)")
+                comp_heroes_lines.append(f"{emoji} **{cname.upper()}** | {wr}% WR ({tgames}P)")
                 
         if self.meta_data and self.meta_data.get("heroes_unranked"):
             for h in self.meta_data["heroes_unranked"][:5]:
                 emoji = get_hero_emoji(h["name"], str(self.target.id), fake_lords_dict, True)
-                casual_heroes_lines.append(f"{emoji} **{h['name']}** | {h['wr']}% WR\n└ `{h['kda']} KDA` ({h['matches']}P)")
+                name_upper = h["name"].upper()
+                casual_heroes_lines.append(f"{emoji} **{name_upper}** | {h['wr']}% WR ({h['matches']}P)")
         else:
             local_casual = await db.get_top_characters(self.target.id, mode_type="unranked", limit=5)
             for cname, tgames, wins, ak, ad, aa in local_casual:
                 emoji = get_hero_emoji(cname, str(self.target.id), fake_lords_dict, True)
                 wr = int((wins / tgames) * 100) if tgames > 0 else 0
-                kda = round((ak + aa) / max(1, ad), 2)
-                casual_heroes_lines.append(f"{emoji} **{cname}** | {wr}% WR\n└ `{kda} KDA` ({tgames}P)")
+                casual_heroes_lines.append(f"{emoji} **{cname.upper()}** | {wr}% WR ({tgames}P)")
                 
         val_comp = "\n".join(comp_heroes_lines) if comp_heroes_lines else t("profile_no_heroes", self.lang)
         val_cas = "\n".join(casual_heroes_lines) if casual_heroes_lines else t("profile_no_heroes", self.lang)
