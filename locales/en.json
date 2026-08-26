@@ -171,5 +171,18 @@
     "char_teamups_title": "Team-Ups — {name}",
     "char_no_teamups": "*This character has no active team-ups.*",
     "char_error": "❌ An error occurred while fetching the character information.",
-    "cmd_character": "Show info, abilities, and team-ups for a hero."
+    "cmd_character": "Show info, abilities, and team-ups for a hero.",
+    "char_btn_balance": "⚖️ Balance",
+    "char_select_all_abilities": "📜 View all abilities",
+    "char_select_ability_placeholder": "Select an ability to view its icon and details...",
+    "char_select_all_teamups": "📜 View all team-ups",
+    "char_select_teamup_placeholder": "Select a team-up to view details...",
+    "char_abilities_summary_desc": "Use the dropdown menu to view details and official icon of each ability.",
+    "char_teamups_summary_desc": "Use the dropdown menu to view details and official icon of each team-up.",
+    "char_ability_key_label": "Key Binding",
+    "char_teamup_partner_label": "Team-Up Partner",
+    "char_balance_title": "Balance Changes — {name}",
+    "char_balance_desc": "Adjustments, buffs, and nerfs applied to this character across seasons.",
+    "char_no_balance": "*No balance changes recorded for this character.*",
+    "char_no_desc": "*No description available.*"
 }
