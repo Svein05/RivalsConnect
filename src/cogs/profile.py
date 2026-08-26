@@ -453,6 +453,10 @@ class Profile(commands.Cog):
                         user_list[6] = rivals_elo
                         user_data = tuple(user_list)
                         
+                    # Sincronizar historial oficial a SQLite
+                    if meta_data.get("match_history"):
+                        await db.sync_rivalsmeta_matches(target.id, meta_data["match_history"])
+                        
             view = ProfileView(
                 target=target,
                 user_data=user_data,
