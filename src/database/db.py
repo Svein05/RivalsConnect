@@ -112,6 +112,12 @@ async def init_db():
             if name in ES_TO_KEY:
                 await db.execute('UPDATE elo_thresholds SET rank_name = ? WHERE rank_name = ?', (ES_TO_KEY[name], name))
         
+        # Check if roster_json column exists in matches
+        async with db.execute('PRAGMA table_info(matches)') as cursor:
+            cols = [c[1] for c in await cursor.fetchall()]
+            if 'roster_json' not in cols:
+                await db.execute('ALTER TABLE matches ADD COLUMN roster_json TEXT')
+
         await db.commit()
 
 async def get_user_by_code(code: str):
@@ -192,18 +198,18 @@ async def get_all_lords_by_uid():
                 lords[uid][char.upper()] = title
     return lords
 
-async def add_match(discord_id: int, elo_change: int, kills: int, deaths: int, assists: int, damage: int, heal: int, outcome: str, character_name: str, mode: str, map_name: str):
+async def add_match(discord_id: int, elo_change: int, kills: int, deaths: int, assists: int, damage: int, heal: int, outcome: str, character_name: str, mode: str, map_name: str, roster_json: str = None):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute('''
-            INSERT INTO matches (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name))
+            INSERT INTO matches (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, roster_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, roster_json))
         await db.commit()
 
 async def get_recent_matches(discord_id: int, limit: int = 5):
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute('''
-            SELECT elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, match_date
+            SELECT elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, match_date, roster_json
             FROM matches
             WHERE discord_id = ?
             ORDER BY match_date DESC
