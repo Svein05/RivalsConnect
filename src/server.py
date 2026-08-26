@@ -258,7 +258,7 @@ async def handle_user_stats(request):
         user_lords = await db.get_user_lords(discord_id)
         top_chars = await db.get_top_characters(discord_id, limit=5)
         role_stats = await db.get_top_roles(discord_id)
-        recent_matches = await db.get_recent_matches(discord_id, limit=10)
+        recent_matches = await db.get_recent_matches(discord_id, limit=100)
         
         matches_formatted = []
         for m in recent_matches:
