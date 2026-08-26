@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 from src.database import db
 from src.utils.i18n import t, translate_rank
+from src.utils.rivalsmeta import fetch_player_from_rivalsmeta
 import logging
 
 logger = logging.getLogger("profile_cog")
@@ -10,7 +11,7 @@ logger = logging.getLogger("profile_cog")
 ROLE_FALLBACK = {
     "vanguard": "🛡️",
     "duelist": "⚔️",
-    "strategist": "💚",
+    "strategist": "💚"
 }
 
 class Profile(commands.Cog):
@@ -22,12 +23,14 @@ class Profile(commands.Cog):
         target = usuario or interaction.user
         lang = await db.get_user_language(interaction.user.id)
         
+        await interaction.response.defer()
+        
         try:
             # Buscar en la DB
             user_data = await db.get_user(target.id)
             
             if not user_data:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     t("profile_no_account", lang, name=target.display_name),
                     ephemeral=True
                 )
@@ -43,6 +46,17 @@ class Profile(commands.Cog):
             elo_score = user_data[6] or 0
             in_game_uid = user_data[7]
             
+            # Sincronización controlada con RivalsMeta si el usuario tiene UID
+            meta_data = None
+            if in_game_uid:
+                meta_data = await fetch_player_from_rivalsmeta(in_game_uid)
+                if meta_data:
+                    rivals_elo = int(meta_data.get("elo", 0))
+                    # Si RivalsMeta tiene un ELO válido y es distinto, calibramos
+                    if rivals_elo > 0 and rivals_elo != elo_score:
+                        await db.update_user_elo(target.id, rivals_elo, in_game_uid)
+                        elo_score = rivals_elo
+            
             # Crear Embed
             rank_key = await db.get_user_rank(elo_score)
             rank_name = translate_rank(rank_key, lang)
@@ -57,6 +71,27 @@ class Profile(commands.Cog):
             embed.add_field(name=t("profile_comp_rank", lang), value=f"**{rank_name}** ({elo_score} ELO)", inline=False)
             if in_game_uid:
                 embed.add_field(name=t("profile_rivals_id", lang), value=f"`{in_game_uid}`", inline=False)
+                
+            # Estadísticas Globales de RivalsMeta (si están disponibles)
+            if meta_data and meta_data.get("ranked_matches", 0) > 0:
+                season_num = meta_data.get("active_season", 0)
+                matches = meta_data.get("ranked_matches", 0)
+                wr = meta_data.get("ranked_wr", 0.0)
+                kda = meta_data.get("kda", 0.0)
+                k = meta_data.get("kills", 0)
+                d = meta_data.get("deaths", 0)
+                a = meta_data.get("assists", 0)
+                
+                global_lines = [
+                    f"• **{t('profile_global_matches', lang)}:** `{matches}` ({wr}% WR)",
+                    f"• **{t('profile_global_kda', lang)}:** `{kda}` ({k}K / {d}D / {a}A)",
+                    f"*{t('profile_synced_rivalsmeta', lang)}*"
+                ]
+                embed.add_field(
+                    name=t("profile_global_section", lang, season=season_num),
+                    value="\n".join(global_lines),
+                    inline=False
+                )
                 
             # Cargar los Lords del usuario
             user_lords = await db.get_user_lords(target.id)
@@ -121,7 +156,6 @@ class Profile(commands.Cog):
             if recent_matches:
                 history_text = []
                 for idx, match in enumerate(recent_matches, 1):
-                    # match: elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, match_date
                     m_k = match[1]
                     m_d = match[2]
                     m_a = match[3]
@@ -152,13 +186,27 @@ class Profile(commands.Cog):
                 embed.add_field(name=t("profile_recent_title", lang), value=t("profile_recent_empty", lang), inline=False)
                 
             embed.set_footer(text=t("profile_footer", lang))
-            await interaction.response.send_message(embed=embed)
+            
+            # Botón URL a RivalsMeta si el usuario tiene UID registrado
+            view = None
+            if in_game_uid:
+                view = discord.ui.View(timeout=180)
+                btn_rivals = discord.ui.Button(
+                    label=t("btn_view_rivalsmeta", lang),
+                    url=f"https://rivalsmeta.com/player/{in_game_uid}",
+                    style=discord.ButtonStyle.link,
+                    emoji="🌐"
+                )
+                view.add_item(btn_rivals)
+                
+            if view:
+                await interaction.followup.send(embed=embed, view=view)
+            else:
+                await interaction.followup.send(embed=embed)
             
         except Exception as e:
             logger.error(f"Error ejecutando /profile: {e}")
-            await interaction.response.send_message(t("profile_error", lang), ephemeral=True)
+            await interaction.followup.send(t("profile_error", lang), ephemeral=True)
 
 async def setup(bot):
     await bot.add_cog(Profile(bot))
-
-
