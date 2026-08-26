@@ -64,12 +64,13 @@ async def handle_overwolf_events(request):
     
     try:
         data = await request.json()
-        link_code = data.get("link_code")
         
+        # Si es un ping de comprobación de conexión o salud
+        if data.get("event") == "ping":
+            return web.Response(status=200, headers=headers, text="pong")
+
+        link_code = data.get("link_code")
         if not link_code:
-            # Si no hay link_code pero es un ping inicial (sin vincular)
-            if data.get("event") == "ping":
-                return web.Response(status=200, headers=headers, text="pong")
             return web.Response(status=401, headers=headers, text="Missing link_code")
             
         # Verificar usuario en DB
