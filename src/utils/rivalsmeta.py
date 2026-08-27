@@ -34,7 +34,7 @@ GAME_MODE_MAP = {
     3: "Domination"
 }
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 BOOT_TIME = int(time.time())
 
@@ -169,7 +169,7 @@ def calculate_role_winrates(heroes_list: List[Dict[str, Any]]) -> Dict[str, Dict
         
     return roles
 
-def parse_rivalsmeta_payload(raw_json: Dict[str, Any], uid: str) -> Dict[str, Any]:
+def parse_rivalsmeta_payload(raw_json: Dict[str, Any], uid: str, raw_rank_history: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Parsea completamente el JSON de RivalsMeta estructurando héroes, mapas, historial y ranking."""
     player = raw_json.get("player", {})
     info = player.get("info", {})
@@ -303,6 +303,10 @@ def parse_rivalsmeta_payload(raw_json: Dict[str, Any], uid: str) -> Dict[str, An
         "rank_history_points": rank_history_points,
         "match_history": match_history,
         "maps_data": maps_data,
+        "season": int(raw_rank_history.get("season", latest_season_num or 19)) if (raw_rank_history and raw_rank_history.get("season")) else int(latest_season_num or 19),
+        "rank_history_matches": raw_rank_history.get("matches", []) if raw_rank_history else [],
+        "rank_history_summary": raw_rank_history.get("summary", {}) if raw_rank_history else {},
+        "rank_transitions": raw_rank_history.get("transitions", []) if raw_rank_history else [],
         "web_url": f"https://rivalsmeta.com/player/{uid}",
         "schema_version": SCHEMA_VERSION,
         "cached": False
@@ -321,6 +325,7 @@ async def fetch_player_from_rivalsmeta(uid: str) -> Optional[Dict[str, Any]]:
         return cached
         
     url = f"{BASE_URL}/{clean_uid}"
+    rank_history_url = f"{BASE_URL}/{clean_uid}/rank-history"
     headers = {
         "X-API-Key": API_KEY,
         "User-Agent": "RivalsConnectBot/1.0 (Marvel Rivals Discord Bot; contact: Discord)"
@@ -331,7 +336,17 @@ async def fetch_player_from_rivalsmeta(uid: str) -> Optional[Dict[str, Any]]:
             async with session.get(url, headers=headers, timeout=15) as resp:
                 if resp.status == 200:
                     raw_data = await resp.json()
-                    structured = parse_rivalsmeta_payload(raw_data, clean_uid)
+                    
+                    # Consultar también el historial completo de rango por temporada
+                    raw_rank_history = None
+                    try:
+                        async with session.get(rank_history_url, headers=headers, timeout=15) as r_resp:
+                            if r_resp.status == 200:
+                                raw_rank_history = await r_resp.json()
+                    except Exception as e:
+                        logger.warning(f"Error consultando rank-history para UID {clean_uid}: {e}")
+                        
+                    structured = parse_rivalsmeta_payload(raw_data, clean_uid, raw_rank_history)
                     await save_cached_player(clean_uid, structured)
                     return structured
                 else:
