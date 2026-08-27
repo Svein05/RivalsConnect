@@ -212,18 +212,35 @@ async def get_all_lords_by_uid():
                 lords[uid][char.upper()] = title
     return lords
 
-async def add_match(discord_id: int, elo_change: int, kills: int, deaths: int, assists: int, damage: int, heal: int, outcome: str, character_name: str, mode: str, map_name: str, roster_json: str = None):
+async def get_current_season() -> int:
+    """Devuelve la temporada activa detectada dinámicamente desde los datos del juego."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute('SELECT MAX(season) FROM matches WHERE season IS NOT NULL') as cursor:
+                row = await cursor.fetchone()
+                if row and row[0]:
+                    return int(row[0])
+    except Exception:
+        pass
+    return 19
+
+async def add_match(discord_id: int, elo_change: int, kills: int, deaths: int, assists: int, damage: int, heal: int, outcome: str, character_name: str, mode: str, map_name: str, roster_json: str = None, season: Optional[int] = None):
+    if season is None:
+        season = await get_current_season()
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute('''
-            INSERT INTO matches (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, roster_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, roster_json))
+            INSERT INTO matches (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, roster_json, season)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, roster_json, season))
         await db.commit()
 
-async def sync_rivalsmeta_matches(discord_id: int, match_history: list, season: int = 19):
+async def sync_rivalsmeta_matches(discord_id: int, match_history: list, season: Optional[int] = None):
     """Inserta las partidas del historial de RivalsMeta en la tabla matches si no existen previamente y reconcilia duplicados."""
     if not match_history:
         return
+        
+    if season is None:
+        season = await get_current_season()
         
     from datetime import datetime, timezone
     from src.utils.heroes import get_hero_by_id
@@ -313,10 +330,13 @@ async def sync_rivalsmeta_matches(discord_id: int, match_history: list, season: 
         ''', (discord_id,))
         await db.commit()
 
-async def sync_rivalsmeta_rank_history(discord_id: int, rank_matches: list, season: int = 19):
+async def sync_rivalsmeta_rank_history(discord_id: int, rank_matches: list, season: Optional[int] = None):
     """Guarda todas las partidas del historial de la temporada (/rank-history) en SQLite si no existen."""
     if not rank_matches:
         return
+        
+    if season is None:
+        season = await get_current_season()
         
     from datetime import datetime, timezone
     from src.utils.heroes import get_hero_by_id
