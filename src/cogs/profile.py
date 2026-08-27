@@ -156,17 +156,14 @@ class ProfileView(discord.ui.View):
         rank_key = await db.get_user_rank(elo_score)
         rank_name = translate_rank(rank_key, self.lang)
         
+        player_game_name = (self.meta_data.get("player_name") if self.meta_data else None) or self.target.display_name
         embed = discord.Embed(
-            title=t("profile_title", self.lang, name=self.target.display_name),
+            title=f"{player_game_name} | {rank_name} ({elo_score} ELO)",
             color=discord.Color.blurple(),
             timestamp=discord.utils.utcnow()
         )
         if self.target.avatar:
             embed.set_thumbnail(url=self.target.avatar.url)
-            
-        embed.add_field(name=t("profile_comp_rank", self.lang), value=f"**{rank_name}** ({elo_score} ELO)", inline=False)
-        if in_game_uid:
-            embed.add_field(name=t("profile_rivals_id", self.lang), value=f"`{in_game_uid}`", inline=False)
             
         # Cargar los Lords del usuario
         user_lords = await db.get_user_lords(self.target.id)
@@ -189,26 +186,24 @@ class ProfileView(discord.ui.View):
         if self.meta_data and self.meta_data.get("heroes_ranked"):
             for h in self.meta_data["heroes_ranked"][:5]:
                 emoji = get_hero_emoji(h["name"], str(self.target.id), fake_lords_dict, True)
-                name_upper = h["name"].upper()
-                comp_heroes_lines.append(f"{emoji} **{name_upper}** | {h['wr']}% WR ({h['matches']}P)")
+                comp_heroes_lines.append(f"{emoji} {h['wr']}% WR ({h['matches']}P)")
         else:
             local_comp = await db.get_top_characters(self.target.id, mode_type="ranked", limit=5)
             for cname, tgames, wins, ak, ad, aa in local_comp:
                 emoji = get_hero_emoji(cname, str(self.target.id), fake_lords_dict, True)
                 wr = int((wins / tgames) * 100) if tgames > 0 else 0
-                comp_heroes_lines.append(f"{emoji} **{cname.upper()}** | {wr}% WR ({tgames}P)")
+                comp_heroes_lines.append(f"{emoji} {wr}% WR ({tgames}P)")
                 
         if self.meta_data and self.meta_data.get("heroes_unranked"):
             for h in self.meta_data["heroes_unranked"][:5]:
                 emoji = get_hero_emoji(h["name"], str(self.target.id), fake_lords_dict, True)
-                name_upper = h["name"].upper()
-                casual_heroes_lines.append(f"{emoji} **{name_upper}** | {h['wr']}% WR ({h['matches']}P)")
+                casual_heroes_lines.append(f"{emoji} {h['wr']}% WR ({h['matches']}P)")
         else:
             local_casual = await db.get_top_characters(self.target.id, mode_type="unranked", limit=5)
             for cname, tgames, wins, ak, ad, aa in local_casual:
                 emoji = get_hero_emoji(cname, str(self.target.id), fake_lords_dict, True)
                 wr = int((wins / tgames) * 100) if tgames > 0 else 0
-                casual_heroes_lines.append(f"{emoji} **{cname.upper()}** | {wr}% WR ({tgames}P)")
+                casual_heroes_lines.append(f"{emoji} {wr}% WR ({tgames}P)")
                 
         val_comp = "\n".join(comp_heroes_lines) if comp_heroes_lines else t("profile_no_heroes", self.lang)
         val_cas = "\n".join(casual_heroes_lines) if casual_heroes_lines else t("profile_no_heroes", self.lang)
@@ -365,7 +360,11 @@ class ProfileView(discord.ui.View):
             history_points=history_points,
             season_name=f"S{active_season}",
             current_rs=elo_score,
-            peak_rs=peak_rs
+            peak_rs=peak_rs,
+            lang=self.lang,
+            rank_history_matches=self.meta_data.get("rank_history_matches", []) if self.meta_data else [],
+            rank_history_summary=self.meta_data.get("rank_history_summary", {}) if self.meta_data else {},
+            rank_transitions=self.meta_data.get("rank_transitions", []) if self.meta_data else []
         )
         file = discord.File(fp=chart_buf, filename="rank_progression.png")
         embed.set_image(url="attachment://rank_progression.png")
@@ -458,9 +457,12 @@ class Profile(commands.Cog):
                         user_list[6] = rivals_elo
                         user_data = tuple(user_list)
                         
-                    # Sincronizar historial oficial a SQLite
+                    # Sincronizar historial oficial a SQLite por temporada
+                    season = meta_data.get("season", 19)
                     if meta_data.get("match_history"):
-                        await db.sync_rivalsmeta_matches(target.id, meta_data["match_history"])
+                        await db.sync_rivalsmeta_matches(target.id, meta_data["match_history"], season=season)
+                    if meta_data.get("rank_history_matches"):
+                        await db.sync_rivalsmeta_rank_history(target.id, meta_data["rank_history_matches"], season=season)
                         
             view = ProfileView(
                 target=target,

@@ -61,6 +61,10 @@ async def init_db():
             await db.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_matches_uid ON matches(match_uid) WHERE match_uid IS NOT NULL")
         except:
             pass
+        try:
+            await db.execute("ALTER TABLE matches ADD COLUMN season INTEGER DEFAULT 19")
+        except:
+            pass
         
         await db.execute('''
             CREATE TABLE IF NOT EXISTS guild_config (
@@ -290,9 +294,9 @@ async def sync_rivalsmeta_matches(discord_id: int, match_history: list):
                     
             # 3. Si no existe, insertar nueva fila oficial
             await db.execute('''
-                INSERT INTO matches (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, match_date, match_uid)
-                VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?)
-            ''', (discord_id, add_score, k, d, a, outcome, hero_name, mode_name, map_name, dt_str, m_uid))
+                INSERT INTO matches (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, match_date, match_uid, season)
+                VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?, ?, ?, ?, ?)
+            ''', (discord_id, add_score, k, d, a, outcome, hero_name, mode_name, map_name, dt_str, m_uid, season))
             
         # 4. Eliminar cualquier duplicado residual sin match_uid que tenga los mismos K/D/A de una partida con match_uid
         await db.execute('''
@@ -309,6 +313,41 @@ async def sync_rivalsmeta_matches(discord_id: int, match_history: list):
         ''', (discord_id,))
         await db.commit()
 
+async def sync_rivalsmeta_rank_history(discord_id: int, rank_matches: list, season: int = 19):
+    """Guarda todas las partidas del historial de la temporada (/rank-history) en SQLite si no existen."""
+    if not rank_matches:
+        return
+        
+    from datetime import datetime, timezone
+    from src.utils.heroes import get_hero_by_id
+    
+    async with aiosqlite.connect(DB_PATH) as db:
+        for m in rank_matches:
+            m_uid = str(m.get("match_uid", "")).strip()
+            if not m_uid:
+                continue
+                
+            async with db.execute("SELECT id FROM matches WHERE match_uid = ?", (m_uid,)) as cursor:
+                if await cursor.fetchone():
+                    continue
+                    
+            hero_id = m.get("hero_id")
+            hero_info = get_hero_by_id(hero_id)
+            hero_name = hero_info.get("display_name", f"Hero {hero_id}")
+            
+            is_win = bool(m.get("is_win", False))
+            outcome = "VICTORIA" if is_win else "DERROTA"
+            score_change = int(round(float(m.get("score_change", 0))))
+            ts = m.get("timestamp", 0)
+            dt_str = datetime.fromtimestamp(ts, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S") if ts else None
+            
+            await db.execute('''
+                INSERT INTO matches (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, match_date, match_uid, season)
+                VALUES (?, ?, 0, 0, 0, 0, 0, ?, ?, 'Competitive', 'Marvel Rivals Map', ?, ?, ?)
+            ''', (discord_id, score_change, outcome, hero_name, dt_str, m_uid, season))
+            
+        await db.commit()
+
 async def get_recent_matches(discord_id: int, limit: int = 10):
     async with aiosqlite.connect(DB_PATH) as db:
         async with db.execute('''
@@ -321,10 +360,10 @@ async def get_recent_matches(discord_id: int, limit: int = 10):
             return await cursor.fetchall()
 
 def format_relative_time(date_val, lang: str = "es") -> str:
-    """Calcula y formatea el tiempo transcurrido desde la partida a texto legible."""
+    """Calcula y formatea el tiempo transcurrido en formato ultra-compacto (| 3h, | 3d, | 3m)."""
     from datetime import datetime, timezone
     if not date_val:
-        return "Hace poco" if lang == "es" else "Just now"
+        return "1min"
         
     now = datetime.now(timezone.utc)
     match_dt = None
@@ -340,7 +379,7 @@ def format_relative_time(date_val, lang: str = "es") -> str:
                 pass
                 
     if not match_dt:
-        return str(date_val)
+        return "1min"
         
     diff = (now - match_dt).total_seconds()
     if diff < 0:
@@ -348,19 +387,16 @@ def format_relative_time(date_val, lang: str = "es") -> str:
         
     if diff < 3600:
         mins = max(1, int(diff / 60))
-        return f"Hace {mins} minutos" if lang == "es" else f"{mins} mins ago"
+        return f"{mins}min"
     elif diff < 86400:
         hours = max(1, int(diff / 3600))
-        unit = "hora" if hours == 1 else "horas"
-        return f"Hace {hours} {unit}" if lang == "es" else f"{hours} hours ago"
+        return f"{hours}h"
     elif diff < 2592000:
         days = max(1, int(diff / 86400))
-        unit = "dia" if days == 1 else "dias"
-        return f"Hace {days} {unit}" if lang == "es" else f"{days} days ago"
+        return f"{days}d"
     else:
         months = max(1, int(diff / 2592000))
-        unit = "mes" if months == 1 else "meses"
-        return f"Hace {months} {unit}" if lang == "es" else f"{months} months ago"
+        return f"{months}m"
 
 async def update_user_lords(discord_id: int, heroes: list, title_type: str):
     async with aiosqlite.connect(DB_PATH) as db:
