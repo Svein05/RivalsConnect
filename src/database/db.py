@@ -220,7 +220,7 @@ async def add_match(discord_id: int, elo_change: int, kills: int, deaths: int, a
         ''', (discord_id, elo_change, kills, deaths, assists, damage, heal, outcome, character_name, mode, map_name, roster_json))
         await db.commit()
 
-async def sync_rivalsmeta_matches(discord_id: int, match_history: list):
+async def sync_rivalsmeta_matches(discord_id: int, match_history: list, season: int = 19):
     """Inserta las partidas del historial de RivalsMeta en la tabla matches si no existen previamente y reconcilia duplicados."""
     if not match_history:
         return
