@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Optional
 import matplotlib
 matplotlib.use('Agg')  # Modo no interactivo para entornos de servidor
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from PIL import Image
 
@@ -47,7 +48,7 @@ def generate_rank_progression_chart(
 ) -> io.BytesIO:
     """
     Genera un gráfico PNG idéntico al de RivalsMeta con toda la progresión de la temporada.
-    Soporta visualización bilingüe (ES / EN) e incrusta iconos oficiales de rangos.
+    Utiliza GridSpec para maximizar el ancho de la curva (86%) y mantener la barra lateral fija (14%).
     """
     scores = []
     matches = rank_history_matches or []
@@ -77,24 +78,37 @@ def generate_rank_progression_chart(
     red_demo = "#f43f5e"
     text_gray = "#64748b"
 
-    fig, ax = plt.subplots(figsize=(10.5, 4.5), dpi=140)
+    fig = plt.figure(figsize=(10.5, 4.5), dpi=140)
     fig.patch.set_facecolor(bg_color)
-    ax.set_facecolor(bg_color)
+    
+    # 2 columnas proporcionales: Barra lateral compacta (1.4), Curva panorámica completa (8.6)
+    gs = gridspec.GridSpec(1, 2, width_ratios=[1.4, 8.6], wspace=0.0)
+    
+    ax_sidebar = fig.add_subplot(gs[0])
+    ax_curve = fig.add_subplot(gs[1], sharey=ax_sidebar)
+    
+    ax_sidebar.set_facecolor(bg_color)
+    ax_curve.set_facecolor(bg_color)
 
     x_vals = list(range(len(scores)))
     y_vals = scores
-    ax.plot(x_vals, y_vals, color=line_orange, linewidth=2.2, zorder=4)
+    ax_curve.plot(x_vals, y_vals, color=line_orange, linewidth=2.2, zorder=4)
 
     min_s = min(scores)
     max_s = max(scores)
-    sidebar_width = 20
+    pad = max(30, (max_s - min_s) * 0.12)
+    ax_curve.set_ylim(min_s - pad, max_s + pad)
+    ax_curve.set_xlim(0, max(1, len(scores) - 0.5))
 
     # Líneas guía de rangos con icono oficial y texto
     for tier in TIER_THRESHOLDS:
         score_val = tier["score"]
         if min_s - 50 <= score_val <= max_s + 50:
             name = tier.get(lang, tier["en"])
-            ax.axhline(y=score_val, color=grid_dashed, linestyle="--", linewidth=1.0, zorder=2)
+            
+            # Línea discontinua en ambos subplots para continuidad perfecta
+            ax_curve.axhline(y=score_val, color=grid_dashed, linestyle="--", linewidth=1.0, zorder=2)
+            ax_sidebar.axhline(y=score_val, color=grid_dashed, linestyle="--", linewidth=1.0, zorder=2)
             
             icon_file = os.path.join(ASSETS_DIR, f"{tier['icon']}.png")
             if os.path.exists(icon_file):
@@ -102,13 +116,13 @@ def generate_rank_progression_chart(
                     img = Image.open(icon_file).convert("RGBA")
                     img.thumbnail((22, 22), Image.Resampling.LANCZOS)
                     imagebox = OffsetImage(img, zoom=0.65)
-                    ab = AnnotationBbox(imagebox, (-sidebar_width + 2.5, score_val), frameon=False, zorder=5)
-                    ax.add_artist(ab)
+                    ab = AnnotationBbox(imagebox, (0.16, score_val), frameon=False, zorder=5)
+                    ax_sidebar.add_artist(ab)
                 except Exception:
                     pass
                 
-            ax.text(
-                -sidebar_width + 4.8, score_val, f" {name}", 
+            ax_sidebar.text(
+                0.32, score_val, f" {name}", 
                 color=text_gray, fontsize=8.2, va="center", ha="left",
                 fontweight="normal"
             )
@@ -122,20 +136,26 @@ def generate_rank_progression_chart(
             if idx < len(scores):
                 score_at = scores[idx]
                 color = green_promo if t.get("type") == "promotion" else red_demo
-                ax.scatter([idx], [score_at], s=45, facecolors=bg_color, edgecolors=color, linewidth=2.2, zorder=6)
+                ax_curve.scatter([idx], [score_at], s=45, facecolors=bg_color, edgecolors=color, linewidth=2.2, zorder=6)
 
-    ax.set_xlim(-sidebar_width, len(scores) + 1)
-    pad = max(30, (max_s - min_s) * 0.12)
-    ax.set_ylim(min_s - pad, max_s + pad)
+    # Configurar bordes de la barra lateral (la espina derecha es la divisoria vertical)
+    for spine_name, spine in ax_sidebar.spines.items():
+        if spine_name == "right":
+            spine.set_visible(True)
+            spine.set_color("#1e293b")
+            spine.set_linewidth(1.2)
+        else:
+            spine.set_visible(False)
+            
+    ax_sidebar.set_xticks([])
+    ax_sidebar.set_yticks([])
+    ax_sidebar.set_xlim(0, 1)
 
-    # Remover ejes y spines
-    for spine in ax.spines.values():
+    # Remover spines del gráfico de la curva
+    for spine in ax_curve.spines.values():
         spine.set_visible(False)
-    ax.set_xticks([])
-    ax.set_yticks([])
-
-    # Separador vertical de la barra lateral
-    ax.axvline(x=-0.5, color="#1e293b", linewidth=1.2, zorder=3)
+    ax_curve.set_xticks([])
+    ax_curve.set_yticks([])
 
     # Textos de cabecera bilingües
     title_text = "Progresión de Rango" if lang == "es" else "Rank Progression"
@@ -149,7 +169,7 @@ def generate_rank_progression_chart(
              fontsize=10.5, fontweight="bold", ha="right",
              bbox=dict(boxstyle="round,pad=0.3", facecolor="#064e3b" if net_score >= 0 else "#4c0519", edgecolor="none"))
 
-    plt.subplots_adjust(left=0.20, right=0.97, top=0.82, bottom=0.06)
+    plt.subplots_adjust(left=0.04, right=0.97, top=0.82, bottom=0.06)
 
     buf = io.BytesIO()
     plt.savefig(buf, format="png", facecolor=bg_color, edgecolor="none")
