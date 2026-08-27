@@ -1,5 +1,6 @@
 import aiosqlite
 import os
+from typing import Optional, List, Dict, Any, Tuple
 
 DB_PATH = "rivalsconnect.db"
 
